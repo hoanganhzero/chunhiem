@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { db } from "./db";
 import { SESSION_COOKIE, verifySession } from "./session";
-import type { Role } from "./constants";
+import { MANAGER_ROLES, SCHOOL_VIEW_ROLES, type Role } from "./constants";
 
 export type CurrentUser = {
   id: string;
@@ -13,6 +13,7 @@ export type CurrentUser = {
   role: Role;
   schoolId: string | null;
   schoolName: string | null;
+  schoolType: string | null;
 };
 
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
@@ -31,6 +32,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     role: user.role as Role,
     schoolId: user.schoolId,
     schoolName: user.school?.name ?? null,
+    schoolType: user.school?.type ?? null,
   };
 });
 
@@ -41,9 +43,12 @@ export async function requireUser(...roles: Role[]) {
   return user;
 }
 
-/** Quản trị trường — trả về schoolId của trường đang quản lý. */
-export async function requireSchoolAdmin() {
-  const user = await requireUser("SCHOOL_ADMIN");
+/**
+ * Cán bộ quản lý của trường — mặc định quản trị + giáo vụ. Trả về schoolId của trường.
+ * Truyền roles để thu hẹp / mở rộng, vd requireSchoolAdmin(["SCHOOL_ADMIN"]) cho cài đặt.
+ */
+export async function requireSchoolAdmin(roles: Role[] = MANAGER_ROLES) {
+  const user = await requireUser(...roles);
   return { user, schoolId: user.schoolId! };
 }
 
@@ -62,7 +67,7 @@ export async function requireClassAccess(classId: string) {
   if (!cls) notFound();
   const allowed =
     user.role === "SUPER_ADMIN" ||
-    (user.role === "SCHOOL_ADMIN" && cls.schoolId === user.schoolId) ||
+    (SCHOOL_VIEW_ROLES.includes(user.role) && cls.schoolId === user.schoolId) ||
     (user.role === "TEACHER" && cls.homeroomTeacherId === user.id);
   if (!allowed) notFound();
   return { user, cls };

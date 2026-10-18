@@ -217,11 +217,11 @@ export async function teacherTemplate() {
     { header: "Chủ nhiệm lớp", width: 14, text: true },
     { header: "Vai trò", width: 18 },
   ]);
-  listValidation(ws, "E", ["Giáo viên", "Quản trị trường"], 500);
+  listValidation(ws, "E", ["Giáo viên", "Giáo vụ", "Ban Giám hiệu", "Ban Giám đốc", "Quản trị"], 500);
   guideSheet(wb, "HƯỚNG DẪN NHẬP DANH SÁCH GIÁO VIÊN", [
     "1. Mỗi giáo viên một dòng. Cột * là bắt buộc. Email dùng làm tên đăng nhập.",
     "2. \"Chủ nhiệm lớp\": tên lớp trong năm học hiện tại (vd 10A1). Lớp chưa có sẽ được tạo tự động; bỏ trống nếu không chủ nhiệm.",
-    "3. \"Vai trò\": Giáo viên (mặc định) hoặc Quản trị trường.",
+    "3. \"Vai trò\": Giáo viên (mặc định), Giáo vụ, Ban Giám hiệu / Ban Giám đốc, Quản trị (chỉ tài khoản Quản trị mới cấp được các vai trò ngoài Giáo viên).",
     "4. Mật khẩu ban đầu = mật khẩu mặc định của trường, bắt buộc đổi khi đăng nhập lần đầu.",
     "5. Giáo viên đã có (trùng email) sẽ được cập nhật họ tên, SĐT và phân công chủ nhiệm.",
   ]);

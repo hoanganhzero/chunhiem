@@ -12,14 +12,14 @@ export async function postAnnouncement(_: ActionResult, form: FormData): Promise
   const title = str(form, "title");
   const content = str(form, "content");
   if (!title || !content) return { error: "Nhập tiêu đề và nội dung" };
-  await db.announcement.create({ data: { classId: cls.id, authorId: user.id, title, content } });
+  await db.announcement.create({ data: { schoolId: cls.schoolId, classId: cls.id, authorId: user.id, title, content } });
   revalidatePath(`/classes/${cls.id}/messages`);
   return { ok: "Đã gửi thông báo đến phụ huynh và học sinh cả lớp" };
 }
 
 export async function deleteAnnouncement(form: FormData) {
   const a = await db.announcement.findUnique({ where: { id: str(form, "id") } });
-  if (!a) return;
+  if (!a?.classId) return;
   await requireClassAccess(a.classId);
   await db.announcement.delete({ where: { id: a.id } });
   revalidatePath(`/classes/${a.classId}/messages`);

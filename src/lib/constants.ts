@@ -1,13 +1,49 @@
 export const ROLES = {
   SUPER_ADMIN: "Quản trị hệ thống",
-  SCHOOL_ADMIN: "Quản trị trường",
+  SCHOOL_ADMIN: "Quản trị",
+  LEADER: "Ban Giám hiệu",
+  ACADEMIC: "Giáo vụ",
   TEACHER: "Giáo viên",
   STUDENT: "Học sinh",
   PARENT: "Phụ huynh",
 } as const;
 export type Role = keyof typeof ROLES;
-export const STAFF_ROLES: Role[] = ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"];
 export const FAMILY_ROLES: Role[] = ["STUDENT", "PARENT"];
+/** Quản lý dữ liệu trường: lớp, học sinh, giáo viên, môn học, mẫu báo cáo */
+export const MANAGER_ROLES: Role[] = ["SCHOOL_ADMIN", "ACADEMIC"];
+/** Xem toàn trường: thống kê, mọi lớp, báo cáo, thông báo toàn trường */
+export const SCHOOL_VIEW_ROLES: Role[] = ["SCHOOL_ADMIN", "ACADEMIC", "LEADER"];
+/** Tài khoản cán bộ trong trường */
+export const STAFF_ROLES: Role[] = ["SCHOOL_ADMIN", "LEADER", "ACADEMIC", "TEACHER"];
+
+export const SCHOOL_TYPES = {
+  THPT: "Trường THPT",
+  THCS: "Trường THCS",
+  GDNN_GDTX: "Trung tâm GDNN-GDTX",
+} as const;
+export type SchoolType = keyof typeof SCHOOL_TYPES;
+
+/** Cách gọi trên giao diện theo loại đơn vị (Trường / Trung tâm, Học sinh / Học viên…). */
+export function terms(type: string | null | undefined) {
+  const center = type === "GDNN_GDTX";
+  return {
+    unit: center ? "Trung tâm" : "Trường",
+    unitLower: center ? "trung tâm" : "trường",
+    leadership: center ? "Ban Giám đốc" : "Ban Giám hiệu",
+    leadershipShort: center ? "BGĐ" : "BGH",
+    head: center ? "Giám đốc" : "Hiệu trưởng",
+    learner: center ? "Học viên" : "Học sinh",
+    learnerLower: center ? "học viên" : "học sinh",
+    learnerShort: center ? "HV" : "HS",
+  };
+}
+
+export function roleLabel(role: string, schoolType?: string | null) {
+  const t = terms(schoolType);
+  if (role === "LEADER") return t.leadership;
+  if (role === "STUDENT") return t.learner;
+  return ROLES[role as Role] ?? role;
+}
 
 export const ATTENDANCE = {
   PRESENT: "Có mặt",

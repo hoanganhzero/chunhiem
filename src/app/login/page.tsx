@@ -1,28 +1,61 @@
+import { BookMarked, CalendarCheck, FileSpreadsheet, MessageCircle, Smartphone } from "lucide-react";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { PasswordInput } from "@/components/PasswordInput";
 import { login } from "@/actions/auth";
+
+export const metadata = { title: "Đăng nhập" };
 
 export default function LoginPage() {
   return (
-    <div className="login-wrap">
-      <div className="card login-card">
-        <h1>Quản lý lớp chủ nhiệm</h1>
-        <p className="muted" style={{ marginTop: 0 }}>Đăng nhập để tiếp tục</p>
-        <ActionForm action={login}>
-          <div className="field">
-            <label htmlFor="username">Tên đăng nhập</label>
-            <input id="username" name="username" required autoComplete="username" autoCapitalize="none" />
+    <div className="auth">
+      <section className="auth-hero">
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <div className="brand" style={{ padding: 0 }}>
+            <div className="brand-logo"><BookMarked size={20} /></div>
+            <div>
+              <div className="brand-name">Sổ Chủ Nhiệm</div>
+              <div className="brand-sub">Trường THPT · Trung tâm GDNN-GDTX</div>
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="password">Mật khẩu</label>
-            <input id="password" name="password" type="password" required autoComplete="current-password" />
+          <h1>Kết nối nhà trường, giáo viên và gia đình</h1>
+          <p>Điểm danh, sổ điểm, nề nếp và liên lạc phụ huynh — trên một ứng dụng, dùng được cả trên điện thoại.</p>
+          <div className="auth-feats">
+            <div><CalendarCheck /> Điểm danh một chạm, thống kê chuyên cần tức thì</div>
+            <div><MessageCircle /> Sổ liên lạc điện tử, thông báo đến từng phụ huynh</div>
+            <div><FileSpreadsheet /> Sổ điểm TT22, báo cáo Excel theo mẫu của đơn vị</div>
+            <div><Smartphone /> Cài lên màn hình chính như một ứng dụng</div>
           </div>
-          <SubmitButton>Đăng nhập</SubmitButton>
-        </ActionForm>
-        <p className="small muted" style={{ marginBottom: 0 }}>
-          Giáo viên: email · Học sinh: mã học sinh · Phụ huynh: số điện thoại.<br />
-          Lần đầu đăng nhập dùng mật khẩu mặc định do nhà trường cung cấp.
-        </p>
-      </div>
+        </div>
+        <div className="small" style={{ color: "rgba(255,255,255,0.55)", position: "relative", zIndex: 1 }}>© Sổ Chủ Nhiệm</div>
+      </section>
+
+      <section className="auth-form">
+        <div className="inner">
+          <h1>Đăng nhập</h1>
+          <p className="muted" style={{ marginTop: 0, marginBottom: 22 }}>Dùng tài khoản do nhà trường cung cấp</p>
+          <ActionForm action={login}>
+            <div className="field">
+              <label htmlFor="username">Tên đăng nhập</label>
+              <input id="username" name="username" required autoComplete="username" autoCapitalize="none" autoCorrect="off"
+                spellCheck={false} placeholder="Email, mã học sinh hoặc SĐT" />
+            </div>
+            <div className="field">
+              <label htmlFor="password">Mật khẩu</label>
+              <PasswordInput id="password" name="password" required autoComplete="current-password" />
+            </div>
+            <SubmitButton>Đăng nhập</SubmitButton>
+          </ActionForm>
+          <div className="auth-roles">
+            <div><strong>Giáo viên</strong>Email</div>
+            <div><strong>Học sinh</strong>Mã học sinh</div>
+            <div><strong>Phụ huynh</strong>Số điện thoại</div>
+          </div>
+          <p className="small muted" style={{ marginTop: 16 }}>
+            Lần đầu đăng nhập dùng mật khẩu mặc định của nhà trường, hệ thống sẽ yêu cầu đổi mật khẩu mới.
+            Quên mật khẩu? Liên hệ giáo viên chủ nhiệm hoặc giáo vụ để đặt lại.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

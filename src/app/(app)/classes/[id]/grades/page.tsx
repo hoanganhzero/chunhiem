@@ -29,18 +29,20 @@ export default async function GradesPage({
   return (
     <>
       <ClassHeader cls={cls} active="grades" />
-      <div className="card" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        {[1, 2].map((hk) => (
-          <Link key={hk} href={q({ hk: String(hk) })} className={`btn ${hk === semester ? "" : "secondary"}`}>Học kỳ {hk}</Link>
-        ))}
-        <form method="get" style={{ display: "flex", gap: 8 }}>
-          <input type="hidden" name="hk" value={semester} />
-          <select name="mon" defaultValue={subject?.id}>
-            {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <button className="secondary">Chọn môn</button>
-        </form>
-        <Link className="btn secondary" href={`/classes/${cls.id}/grades/summary?hk=${semester}`} style={{ marginLeft: "auto" }}>Bảng tổng hợp & xếp loại →</Link>
+      <div className="card">
+        <div className="card-head" style={{ marginBottom: 10 }}>
+          <div className="chips" style={{ margin: 0 }}>
+            {[1, 2].map((hk) => (
+              <Link key={hk} href={q({ hk: String(hk) })} className={`chip ${hk === semester ? "active" : ""}`}>Học kỳ {hk}</Link>
+            ))}
+          </div>
+          <Link className="btn secondary sm" href={`/classes/${cls.id}/grades/summary?hk=${semester}`}>Tổng hợp & xếp loại</Link>
+        </div>
+        <div className="chips" style={{ margin: 0 }} aria-label="Chọn môn">
+          {subjects.map((s) => (
+            <Link key={s.id} href={q({ mon: s.id })} className={`chip ${s.id === subject?.id ? "active" : ""}`}>{s.name}</Link>
+          ))}
+        </div>
       </div>
 
       {!subject ? (
@@ -50,7 +52,7 @@ export default async function GradesPage({
           <h2>{subject.name} — Học kỳ {semester}</h2>
           <p className="small muted" style={{ marginTop: 0 }}>
             {subject.type === "SCORE"
-              ? "ĐTB môn = (Tổng điểm TX + 2×Giữa kỳ + 3×Cuối kỳ) / (số bài TX + 5) — Thông tư 22. Dùng dấu chấm hoặc phẩy cho số thập phân. Ô trống = chưa có điểm."
+              ? "ĐTB = (ΣTX + 2×GK + 3×CK) / (số bài TX + 5) theo TT22. Ô trống = chưa có điểm; dùng dấu chấm hoặc phẩy."
               : "Môn đánh giá bằng nhận xét: Đạt (Đ) / Chưa đạt (CĐ)."}
           </p>
           <ActionForm action={saveGrades}>
@@ -100,7 +102,7 @@ export default async function GradesPage({
                 </tbody>
               </table>
             </div>
-            {students.length > 0 && <div style={{ marginTop: 14 }}><SubmitButton>Lưu điểm {subject.name}</SubmitButton></div>}
+            {students.length > 0 && <div className="sticky-actions"><SubmitButton>Lưu điểm {subject.name}</SubmitButton><span className="small muted">Học kỳ {semester}</span></div>}
           </ActionForm>
         </div>
       )}

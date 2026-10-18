@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { optStr, str } from "@/lib/utils";
-import { DEFAULT_SUBJECTS } from "@/lib/constants";
+import { DEFAULT_SUBJECTS, SCHOOL_TYPES } from "@/lib/constants";
 import type { ActionResult } from "./types";
 
 /** SUPER_ADMIN: tạo trường mới kèm tài khoản quản trị trường đầu tiên. */
@@ -27,6 +27,7 @@ export async function createSchool(_: ActionResult, form: FormData): Promise<Act
       code,
       name,
       address: optStr(form, "address"),
+      type: str(form, "type") in SCHOOL_TYPES ? str(form, "type") : "THPT",
       subjects: { create: DEFAULT_SUBJECTS.map(([code, name, type], order) => ({ code, name, type, order })) },
       users: {
         create: {

@@ -27,8 +27,12 @@ async function main() {
     data: { schoolId: school.id, name: "2026-2027", isCurrent: true, semester2Start: new Date(Date.UTC(2027, 0, 15)) },
   });
   const staffHash = await bcrypt.hash("matkhau123", 10);
-  await db.user.create({
-    data: { schoolId: school.id, username: "admin@demo.edu.vn", email: "admin@demo.edu.vn", name: "Ban giám hiệu", role: "SCHOOL_ADMIN", passwordHash: staffHash },
+  await db.user.createMany({
+    data: [
+      { schoolId: school.id, username: "admin@demo.edu.vn", email: "admin@demo.edu.vn", name: "Quản trị hệ thống trường", role: "SCHOOL_ADMIN", passwordHash: staffHash },
+      { schoolId: school.id, username: "bgh@demo.edu.vn", email: "bgh@demo.edu.vn", name: "Trần Văn Minh", role: "LEADER", passwordHash: staffHash },
+      { schoolId: school.id, username: "giaovu@demo.edu.vn", email: "giaovu@demo.edu.vn", name: "Lê Thị Thu", role: "ACADEMIC", passwordHash: staffHash },
+    ],
   });
   const gv = await db.user.create({
     data: { schoolId: school.id, username: "gvcn@demo.edu.vn", email: "gvcn@demo.edu.vn", name: "Nguyễn Thị Lan", phone: "0909111222", role: "TEACHER", passwordHash: staffHash },
@@ -83,7 +87,36 @@ async function main() {
     }
   }
   await db.announcement.create({
-    data: { classId: cls.id, authorId: gv.id, title: "Họp phụ huynh đầu năm", content: "Kính mời quý phụ huynh dự họp lúc 8h00 Chủ nhật 25/10 tại phòng 10A1." },
+    data: { schoolId: school.id, classId: null, title: "Lịch kiểm tra giữa kỳ I", content: "Kiểm tra giữa kỳ I diễn ra từ 02/11 đến 07/11. Đề nghị phụ huynh nhắc nhở các em ôn tập." },
+  });
+  await db.announcement.create({
+    data: { schoolId: school.id, classId: cls.id, authorId: gv.id, title: "Họp phụ huynh đầu năm", content: "Kính mời quý phụ huynh dự họp lúc 8h00 Chủ nhật 25/10 tại phòng 10A1." },
+  });
+  // Điểm danh mẫu 10 ngày gần đây cho lớp 10A1
+  const sts = await db.student.findMany({ where: { classId: cls.id } });
+  const now = new Date();
+  for (let d = 1; d <= 10; d++) {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - d));
+    if (date.getUTCDay() === 0) continue;
+    await db.attendance.createMany({
+      data: sts.map((st, i) => ({
+        studentId: st.id, classId: cls.id, date,
+        status: (i + d) % 9 === 0 ? "EXCUSED" : (i + d) % 13 === 0 ? "UNEXCUSED" : (i + d) % 7 === 0 ? "LATE" : "PRESENT",
+      })),
+    });
+  }
+
+  // Trung tâm GDNN-GDTX mẫu (giao diện dùng "Học viên", "Ban Giám đốc")
+  const center = await db.school.create({
+    data: {
+      code: "GDTX-DEMO", name: "Trung tâm GDNN-GDTX Demo", type: "GDNN_GDTX", authority: "SỞ GD&ĐT TP. HỒ CHÍ MINH",
+      principal: "Phạm Văn Long", location: "TP. Hồ Chí Minh", defaultPassword: DEFAULT_PASSWORD,
+      subjects: { create: DEFAULT_SUBJECTS.map(([code, name, type], order) => ({ code, name, type, order })) },
+      academicYears: { create: { name: "2026-2027", isCurrent: true, semester2Start: new Date(Date.UTC(2027, 0, 15)) } },
+    },
+  });
+  await db.user.create({
+    data: { schoolId: center.id, username: "giamdoc@gdtx.edu.vn", email: "giamdoc@gdtx.edu.vn", name: "Phạm Văn Long", role: "LEADER", passwordHash: staffHash },
   });
   console.log("Đã tạo dữ liệu mẫu.");
 }

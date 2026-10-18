@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { GENDERS, STUDENT_STATUS } from "@/lib/constants";
 import { fmtDate, vnNameCompare } from "@/lib/utils";
 import { ClassHeader } from "@/components/ClassHeader";
+import { StatCard } from "@/components/ui";
 import { StudentFields } from "@/components/StudentFields";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { createStudent, importStudents } from "@/actions/classroom";
@@ -31,30 +32,30 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     <>
       <ClassHeader cls={cls} active="students" />
       <div className="grid stats">
-        <div className="card stat"><div className="num">{active.length}</div><div className="label">Sĩ số</div></div>
-        <div className="card stat"><div className="num">{male} / {active.length - male}</div><div className="label">Nam / Nữ</div></div>
+        <StatCard icon="students" value={active.length} label="Sĩ số" />
+        <StatCard icon="learner" value={`${male} / ${active.length - male}`} label="Nam / Nữ" />
       </div>
 
       <div className="card">
-        <div className="page-head" style={{ marginBottom: 10 }}>
-          <h2 style={{ margin: 0 }}>Danh sách học sinh</h2>
-          <a className="btn secondary" href={`/classes/${cls.id}/reports`}>Xuất Excel / báo cáo</a>
+        <div className="card-head">
+          <h2>Danh sách lớp</h2>
+          <a className="btn secondary sm" href={`/classes/${cls.id}/reports`}>Xuất Excel</a>
         </div>
         <div className="table-wrap">
-          <table>
-            <thead><tr><th>#</th><th>Mã HS</th><th>Họ tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Phụ huynh</th><th>Số buổi vắng</th><th>Vi phạm</th><th>Tình trạng</th></tr></thead>
+          <table className="responsive">
+            <thead><tr><th>#</th><th>Họ tên</th><th>Mã</th><th>Ngày sinh</th><th>Giới tính</th><th>Phụ huynh</th><th>Vắng</th><th>Vi phạm</th><th>Tình trạng</th></tr></thead>
             <tbody>
               {students.map((s, i) => (
                 <tr key={s.id}>
-                  <td>{i + 1}</td>
-                  <td><code>{s.code}</code></td>
-                  <td><Link href={`/students/${s.id}`}><strong>{s.fullName}</strong></Link></td>
-                  <td>{fmtDate(s.dob)}</td>
-                  <td>{s.gender ? GENDERS[s.gender as keyof typeof GENDERS] : ""}</td>
-                  <td>{s.parentName}<div className="small muted">{s.parentPhone}</div></td>
-                  <td>{s._count.attendances || ""}</td>
-                  <td>{s._count.conductRecords ? <span className="badge danger">{s._count.conductRecords}</span> : ""}</td>
-                  <td>
+                  <td className="hide-sm">{i + 1}</td>
+                  <td className="primary"><Link href={`/students/${s.id}`}><strong>{s.fullName}</strong></Link></td>
+                  <td data-label="Mã"><code>{s.code}</code></td>
+                  <td data-label="Ngày sinh">{fmtDate(s.dob)}</td>
+                  <td data-label="Giới tính">{s.gender ? GENDERS[s.gender as keyof typeof GENDERS] : ""}</td>
+                  <td data-label="Phụ huynh">{s.parentName}<div className="small">{s.parentPhone && <a href={`tel:${s.parentPhone}`}>{s.parentPhone}</a>}</div></td>
+                  <td data-label="Buổi vắng">{s._count.attendances || "–"}</td>
+                  <td data-label="Vi phạm">{s._count.conductRecords ? <span className="badge danger">{s._count.conductRecords}</span> : "–"}</td>
+                  <td data-label="Tình trạng">
                     <span className={`badge ${s.status === "ACTIVE" ? "ok" : "gray"}`}>
                       {STUDENT_STATUS[s.status as keyof typeof STUDENT_STATUS]}
                     </span>

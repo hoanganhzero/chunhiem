@@ -3,7 +3,8 @@
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireSchoolAdmin } from "@/lib/auth";
+import { requireSchoolAdmin, type CurrentUser } from "@/lib/auth";
+import { SCHOOL_TYPES, SCHOOL_VIEW_ROLES, type Role } from "@/lib/constants";
 import { provisionStudents, resetToDefault, summarize, type ProvisionItem } from "@/lib/accounts";
 import { STUDENT_COLUMNS, TEACHER_COLUMNS, normKey, readTable, toStudentInput } from "@/lib/excel";
 import { optStr, str } from "@/lib/utils";
@@ -26,7 +27,8 @@ async function ensureClass(schoolId: string, academicYearId: string, rawName: st
 // ---------- Cài đặt trường ----------
 
 export async function updateSchoolSettings(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const { schoolId } = await requireSchoolAdmin();
+  const { schoolId } = await requireSchoolAdmin(["SCHOOL_ADMIN"]);
+  const type = str(form, "type");
   const name = str(form, "name");
   const defaultPassword = str(form, "defaultPassword");
   if (!name) return { error: "Tên trường không được để trống" };
@@ -35,6 +37,7 @@ export async function updateSchoolSettings(_: ActionResult, form: FormData): Pro
     where: { id: schoolId },
     data: {
       name, defaultPassword,
+      ...(type in SCHOOL_TYPES ? { type } : {}),
       address: optStr(form, "address"), phone: optStr(form, "phone"), authority: optStr(form, "authority"),
       principal: optStr(form, "principal"), location: optStr(form, "location"),
     },
@@ -43,13 +46,34 @@ export async function updateSchoolSettings(_: ActionResult, form: FormData): Pro
   return { ok: "Đã lưu cài đặt" };
 }
 
-// ---------- Giáo viên ----------
+// ---------- Giáo viên & cán bộ ----------
+
+/**
+ * Quản trị được cấp mọi vai trò cán bộ; giáo vụ chỉ được tạo / quản lý tài khoản giáo viên
+ * (tránh tự nâng quyền bằng cách đặt lại mật khẩu tài khoản quản trị / BGH).
+ */
+function assignableRoles(user: CurrentUser): Role[] {
+  return user.role === "SCHOOL_ADMIN" ? ["TEACHER", "ACADEMIC", "LEADER", "SCHOOL_ADMIN"] : ["TEACHER"];
+}
+function canManageAccount(user: CurrentUser, targetRole: string) {
+  if (user.role === "SCHOOL_ADMIN") return true;
+  return !["SCHOOL_ADMIN", "LEADER", "ACADEMIC", "SUPER_ADMIN"].includes(targetRole);
+}
+/** Vai trò từ cột "Vai trò" trong Excel */
+function roleFromText(text: string): Role {
+  const k = normKey(text);
+  if (k.includes("quantri")) return "SCHOOL_ADMIN";
+  if (k.includes("giamhieu") || k.includes("giamdoc") || k === "bgh" || k === "bgd") return "LEADER";
+  if (k.includes("giaovu")) return "ACADEMIC";
+  return "TEACHER";
+}
 
 export async function createTeacher(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const { schoolId } = await requireSchoolAdmin();
+  const { user, schoolId } = await requireSchoolAdmin();
   const username = str(form, "username").toLowerCase();
   const name = str(form, "name");
-  const role = str(form, "role") === "SCHOOL_ADMIN" ? "SCHOOL_ADMIN" : "TEACHER";
+  const role = (str(form, "role") || "TEACHER") as Role;
+  if (!assignableRoles(user).includes(role)) return { error: "Bạn không có quyền cấp vai trò này" };
   if (!username || !name) return { error: "Vui lòng nhập họ tên và email" };
   if (await db.user.findUnique({ where: { username } })) return { error: "Tên đăng nhập / email đã được sử dụng" };
   const school = await db.school.findUniqueOrThrow({ where: { id: schoolId } });
@@ -64,7 +88,7 @@ export async function createTeacher(_: ActionResult, form: FormData): Promise<Ac
 }
 
 export async function importTeachers(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const { schoolId } = await requireSchoolAdmin();
+  const { user: me, schoolId } = await requireSchoolAdmin();
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "Chưa chọn tệp" };
   const { rows, error } = await readTable(file, TEACHER_COLUMNS, ["name", "username"]);
@@ -77,9 +101,11 @@ export async function importTeachers(_: ActionResult, form: FormData): Promise<A
   for (const { row, values: v } of rows) {
     const username = v.username.toLowerCase();
     if (!/^[^\s@]+@[^\s@]+$/.test(username)) { errors.push(`Dòng ${row}: email không hợp lệ`); continue; }
-    const role = normKey(v.role).includes("quantri") ? "SCHOOL_ADMIN" : "TEACHER";
+    const role = roleFromText(v.role);
+    if (!assignableRoles(me).includes(role)) { errors.push(`Dòng ${row}: không có quyền cấp vai trò "${v.role}"`); continue; }
     const existing = await db.user.findUnique({ where: { username } });
-    if (existing && existing.schoolId !== schoolId) { errors.push(`Dòng ${row}: ${username} thuộc trường khác`); continue; }
+    if (existing && existing.schoolId !== schoolId) { errors.push(`Dòng ${row}: ${username} thuộc đơn vị khác`); continue; }
+    if (existing && !canManageAccount(me, existing.role)) { errors.push(`Dòng ${row}: không có quyền sửa tài khoản ${username}`); continue; }
     const user = existing
       ? await db.user.update({ where: { id: existing.id }, data: { name: v.name, phone: v.phone || existing.phone } })
       : await db.user.create({
@@ -101,8 +127,11 @@ export async function importTeachers(_: ActionResult, form: FormData): Promise<A
 
 /** Đặt lại mật khẩu bất kỳ tài khoản trong trường về mật khẩu mặc định. */
 export async function resetPasswordToDefault(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const { schoolId } = await requireSchoolAdmin();
-  const res = await resetToDefault([str(form, "id")], schoolId);
+  const { user, schoolId } = await requireSchoolAdmin();
+  const target = await db.user.findFirst({ where: { id: str(form, "id"), schoolId } });
+  if (!target) return { error: "Không tìm thấy tài khoản" };
+  if (!canManageAccount(user, target.role)) return { error: "Bạn không có quyền đặt lại mật khẩu tài khoản này" };
+  const res = await resetToDefault([target.id], schoolId);
   return res.count ? { ok: "Đã đặt lại về mật khẩu mặc định" } : { error: "Không tìm thấy tài khoản" };
 }
 
@@ -111,7 +140,7 @@ export async function toggleTeacher(form: FormData) {
   const id = str(form, "id");
   if (id === user.id) return;
   const t = await db.user.findFirst({ where: { id, schoolId } });
-  if (!t) return;
+  if (!t || !canManageAccount(user, t.role)) return;
   await db.user.update({ where: { id }, data: { active: !t.active } });
   revalidatePath("/school/teachers");
 }
@@ -262,4 +291,22 @@ export async function deleteTemplate(form: FormData) {
   const { schoolId } = await requireSchoolAdmin();
   await db.reportTemplate.deleteMany({ where: { id: str(form, "id"), schoolId } });
   revalidatePath("/school/reports");
+}
+
+// ---------- Thông báo toàn trường ----------
+
+export async function postSchoolAnnouncement(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const { user, schoolId } = await requireSchoolAdmin(SCHOOL_VIEW_ROLES);
+  const title = str(form, "title");
+  const content = str(form, "content");
+  if (!title || !content) return { error: "Nhập tiêu đề và nội dung" };
+  await db.announcement.create({ data: { schoolId, classId: null, authorId: user.id, title, content } });
+  revalidatePath("/school/announcements");
+  return { ok: "Đã gửi thông báo đến toàn bộ giáo viên, học sinh và phụ huynh" };
+}
+
+export async function deleteSchoolAnnouncement(form: FormData) {
+  const { schoolId } = await requireSchoolAdmin(SCHOOL_VIEW_ROLES);
+  await db.announcement.deleteMany({ where: { id: str(form, "id"), schoolId, classId: null } });
+  revalidatePath("/school/announcements");
 }

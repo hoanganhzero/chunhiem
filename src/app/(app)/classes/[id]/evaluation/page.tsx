@@ -73,7 +73,7 @@ export default async function EvaluationPage({
               </tbody>
             </table>
           </div>
-          {students.length > 0 && <div style={{ marginTop: 14 }}><SubmitButton>Lưu đánh giá học kỳ {semester}</SubmitButton></div>}
+          {students.length > 0 && <div className="sticky-actions"><SubmitButton>Lưu đánh giá học kỳ {semester}</SubmitButton></div>}
         </ActionForm>
       </div>
     </>

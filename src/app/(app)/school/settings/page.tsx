@@ -2,20 +2,29 @@ import { requireSchoolAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { updateSchoolSettings } from "@/actions/school";
+import { SCHOOL_TYPES } from "@/lib/constants";
+import { PageHeader } from "@/components/ui";
 
 export default async function SettingsPage() {
-  const { schoolId } = await requireSchoolAdmin();
+  const { schoolId } = await requireSchoolAdmin(["SCHOOL_ADMIN"]);
   const s = await db.school.findUniqueOrThrow({ where: { id: schoolId } });
   return (
     <>
-      <div className="page-head"><div><h1>Cài đặt trường</h1><div className="muted">Mã trường: <code>{s.code}</code></div></div></div>
+      <PageHeader title="Cài đặt đơn vị" sub={<>Mã đơn vị: <code>{s.code}</code></>} />
       <ActionForm action={updateSchoolSettings}>
         <div className="card">
           <h2>Thông tin in trên báo cáo</h2>
           <div className="form-grid">
+            <div className="field">
+              <label>Loại đơn vị</label>
+              <select name="type" defaultValue={s.type}>
+                {Object.entries(SCHOOL_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <span className="small muted">Trung tâm GDNN-GDTX: giao diện dùng “Học viên”, “Ban Giám đốc”</span>
+            </div>
             <div className="field"><label>Cơ quan chủ quản</label><input name="authority" defaultValue={s.authority ?? ""} placeholder="SỞ GD&ĐT TP. HỒ CHÍ MINH" /></div>
-            <div className="field"><label>Tên trường</label><input name="name" defaultValue={s.name} required /></div>
-            <div className="field"><label>Hiệu trưởng</label><input name="principal" defaultValue={s.principal ?? ""} /></div>
+            <div className="field"><label>Tên đơn vị</label><input name="name" defaultValue={s.name} required /></div>
+            <div className="field"><label>Hiệu trưởng / Giám đốc</label><input name="principal" defaultValue={s.principal ?? ""} /></div>
             <div className="field"><label>Địa danh (dòng ngày ký)</label><input name="location" defaultValue={s.location ?? ""} placeholder="TP. Hồ Chí Minh" /></div>
             <div className="field"><label>Địa chỉ</label><input name="address" defaultValue={s.address ?? ""} /></div>
             <div className="field"><label>Điện thoại</label><input name="phone" defaultValue={s.phone ?? ""} /></div>

@@ -4,13 +4,28 @@ Website quản lý học sinh lớp chủ nhiệm. Thiết kế **đa trường 
 
 ## Tính năng
 
-| Vai trò | Chức năng |
+Hỗ trợ **Trường THPT / THCS** và **Trung tâm GDNN-GDTX**: chọn loại đơn vị trong Cài đặt, giao diện tự đổi cách gọi
+(Trường ↔ Trung tâm, Học sinh ↔ Học viên, Ban Giám hiệu ↔ Ban Giám đốc).
+
+| Vai trò | Trang chủ & chức năng |
 |---|---|
-| **Quản trị hệ thống** | Tạo / khoá trường (tự tạo sẵn danh mục môn học CT 2018), cấp tài khoản quản trị trường |
-| **Quản trị trường** | Nhập **toàn trường** từ 1 tệp Excel; nhập giáo viên từ Excel; năm học, lớp, phân công GVCN; môn học; mẫu báo cáo riêng; mật khẩu mặc định |
-| **GVCN** | Học sinh & tài khoản, in phiếu tài khoản, điểm danh, nề nếp, **sổ điểm TT22**, đánh giá rèn luyện, **liên lạc phụ huynh**, **xuất báo cáo Excel theo mẫu** |
-| **Phụ huynh** | Xem điểm, chuyên cần, nề nếp, rèn luyện của (các) con; nhận thông báo; nhắn tin với GVCN |
-| **Học sinh** | Xem kết quả học tập của mình, thông báo lớp |
+| **Quản trị hệ thống** | Tạo / khoá đơn vị (trường, trung tâm), cấp tài khoản quản trị đầu tiên |
+| **Quản trị** (đơn vị) | Toàn quyền trong đơn vị: cài đặt, mật khẩu mặc định, cấp mọi vai trò cán bộ |
+| **Ban Giám hiệu / Ban Giám đốc** | Tổng quan toàn đơn vị (chuyên cần hôm nay, lớp chưa điểm danh, biểu đồ vắng 14 ngày), **thống kê học tập & rèn luyện** theo khối / lớp, xem mọi lớp, **thông báo toàn đơn vị** |
+| **Giáo vụ** | Năm học, lớp, phân công GVCN, nhập học sinh / giáo viên từ Excel, môn học, mẫu báo cáo; "việc cần xử lý" (lớp chưa có GVCN, HS thiếu tài khoản). Chỉ quản lý tài khoản giáo viên — không đặt lại mật khẩu quản trị / BGH |
+| **GVCN** | Trang chủ theo lớp: nhắc điểm danh, tin nhắn mới, thao tác nhanh. Điểm danh một chạm, nề nếp, **sổ điểm TT22**, rèn luyện, **liên lạc phụ huynh**, báo cáo Excel |
+| **Phụ huynh** | Chuyển nhanh giữa các con; vắng / khen / vi phạm / kết quả học tập kỳ hiện tại; điểm chi tiết; thông báo lớp & đơn vị; nhắn tin, gọi GVCN |
+| **Học sinh / Học viên** | Kết quả học tập của mình, thông báo |
+
+### Giao diện & ứng dụng điện thoại (PWA)
+- Font **Be Vietnam Pro**, bộ icon Lucide, **chế độ tối** tự động theo điện thoại / máy tính.
+- Máy tính: thanh menu bên trái theo vai trò. Điện thoại: **thanh điều hướng dưới đáy** như app + menu “Thêm” trượt lên.
+- Điểm danh trên điện thoại: mặc định “Có mặt”, chạm 1 lần để đổi; nút **Lưu** luôn nằm ở đáy màn hình; “Tất cả có mặt”.
+- Bảng dài tự chuyển thành thẻ trên màn hình nhỏ; sổ điểm có cột họ tên cố định khi cuộn ngang; ô nhập ≥ 16px (iPhone không tự phóng to).
+- **Cài như ứng dụng**: Android / máy tính hiện nút “Cài đặt”; iPhone hướng dẫn *Chia sẻ → Thêm vào MH chính*.
+  Mở toàn màn hình, có icon riêng, mở nhanh nhờ lưu đệm tài nguyên tĩnh. Mất mạng → trang báo ngoại tuyến.
+  Trang có dữ liệu học sinh **không** được lưu trên máy (an toàn cho máy dùng chung).
+- PWA cần chạy qua **HTTPS** (Vercel / Railway tự có; VPS cần chứng chỉ SSL).
 
 ### Nhập học sinh & cấp tài khoản hàng loạt
 
@@ -57,7 +72,10 @@ Tài khoản mẫu:
 |---|---|---|
 | `superadmin` | `matkhau123` | Quản trị hệ thống |
 | `admin@demo.edu.vn` | `matkhau123` | Quản trị Trường THPT Demo |
+| `bgh@demo.edu.vn` | `matkhau123` | Ban Giám hiệu |
+| `giaovu@demo.edu.vn` | `matkhau123` | Giáo vụ |
 | `gvcn@demo.edu.vn` | `matkhau123` | GVCN lớp 10A1 |
+| `giamdoc@gdtx.edu.vn` | `matkhau123` | Ban Giám đốc — Trung tâm GDNN-GDTX Demo |
 | `7910000001` | `12345678` (buộc đổi) | Học sinh 10A1 |
 | `0908100000` | `12345678` (buộc đổi) | Phụ huynh (có 2 con: 10A1 và 12A1) |
 
@@ -88,7 +106,7 @@ src/app/(app)/              các trang sau đăng nhập
 ## Lộ trình mở rộng gợi ý
 
 - Phân công giáo viên bộ môn tự nhập điểm môn mình dạy; nhập điểm từ Excel
-- Gửi thông báo qua Zalo OA / SMS / email, thông báo đẩy trên điện thoại
+- Thông báo đẩy (Web Push) trên điện thoại khi có tin nhắn / điểm danh vắng; Zalo OA / SMS / email
 - Lên lớp đầu năm: chuyển học sinh sang lớp của năm học mới
 - Báo cáo tổng hợp toàn trường cho BGH
 - Nhật ký thao tác (audit log), đăng nhập Google Workspace của trường
