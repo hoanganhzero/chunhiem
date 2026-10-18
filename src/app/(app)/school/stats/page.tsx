@@ -5,6 +5,9 @@ import { RATINGS, SCHOOL_VIEW_ROLES, terms } from "@/lib/constants";
 import { buildReportData } from "@/lib/reports";
 import { Empty, PageHeader, RatingLegend, RatingStack, StatCard, type RatingCounts } from "@/components/ui";
 
+// Thống kê toàn trường có thể lâu hơn giới hạn mặc định của máy chủ serverless
+export const maxDuration = 60;
+
 export const metadata = { title: "Thống kê học tập" };
 
 const KEYS = Object.keys(RATINGS) as (keyof typeof RATINGS)[];

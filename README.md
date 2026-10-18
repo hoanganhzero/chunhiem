@@ -84,11 +84,14 @@ Nhập lại không tạo trùng (trùng mã → cập nhật). Đã thử 600 h
 
 ## Chạy thử trên máy
 
+Cần Node.js 20+ và PostgreSQL (có sẵn `docker-compose.yml`).
+
 ```bash
 npm install
-cp .env.example .env          # điền AUTH_SECRET: openssl rand -hex 32
-npm run db:push               # tạo CSDL
-npm run db:seed               # dữ liệu mẫu
+docker compose up -d          # PostgreSQL ở localhost:5432 (hoặc dùng CSDL Neon / Supabase)
+cp .env.example .env          # điền AUTH_SECRET: openssl rand -hex 32; khoá VAPID: npx web-push generate-vapid-keys
+npm run db:migrate            # tạo bảng
+npm run db:seed               # dữ liệu mẫu (chỉ dùng để thử)
 npm run dev                   # http://localhost:3000
 ```
 
@@ -107,18 +110,48 @@ Tài khoản mẫu:
 
 > Đổi mật khẩu các tài khoản mẫu (hoặc không chạy seed) trước khi đưa lên môi trường thật.
 
-## Triển khai cho toàn trường
+## Triển khai lên Vercel + Neon (miễn phí để bắt đầu)
 
-1. **CSDL PostgreSQL** (Neon, Supabase, hoặc máy chủ trường): trong `prisma/schema.prisma` đổi `provider = "postgresql"`, đặt `DATABASE_URL`.
-2. **Hosting**: Vercel / Railway / Render, hoặc VPS chạy `npm run build && npm start` sau Nginx + HTTPS.
-3. Biến môi trường: `DATABASE_URL`, `AUTH_SECRET`, và cho thông báo đẩy `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
-   (tạo khoá: `npx web-push generate-vapid-keys`; **giữ nguyên khoá** sau khi triển khai, đổi khoá sẽ làm mất đăng ký của mọi thiết bị).
-4. Chạy `npx prisma db push` (về sau nên chuyển sang `prisma migrate`) rồi tạo tài khoản quản trị hệ thống.
-5. Quy trình đầu năm: quản trị trường tạo năm học → tạo tài khoản GV → tạo lớp & phân công GVCN → GVCN nhập danh sách lớp từ CSV.
+**1. Tạo CSDL PostgreSQL trên [Neon](https://neon.tech)** (chọn vùng Singapore cho gần Việt Nam)
+- Dashboard → **Connect** → bật *Connection pooling* → sao chép chuỗi kết nối → thêm `&pgbouncer=true` vào cuối → đây là **`DATABASE_URL`**.
+- Tắt *Connection pooling* → sao chép chuỗi kết nối → đây là **`DIRECT_URL`**.
+- Dùng Supabase thay Neon: *Transaction pooler* (cổng 6543) + `?pgbouncer=true` là `DATABASE_URL`; *Session pooler* / *Direct* (cổng 5432) là `DIRECT_URL`.
+
+**2. Tạo khoá** (chạy trên máy có Node.js)
+```bash
+openssl rand -hex 32                 # → AUTH_SECRET
+npx web-push generate-vapid-keys     # → VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+```
+
+**3. Tạo dự án trên [Vercel](https://vercel.com)** → *Add New Project* → chọn repo `chunhiem` → mở *Environment Variables*, thêm:
+
+| Biến | Giá trị |
+|---|---|
+| `DATABASE_URL` | chuỗi pooled ở bước 1 |
+| `DIRECT_URL` | chuỗi trực tiếp ở bước 1 (**bắt buộc** — thiếu sẽ báo lỗi *You must provide a nonempty direct URL*) |
+| `AUTH_SECRET` | chuỗi ở bước 2 |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | khoá ở bước 2 — **giữ nguyên mãi**, đổi khoá thì mọi thiết bị phải bật lại thông báo |
+| `VAPID_SUBJECT` | `mailto:email-cua-truong@...` |
+
+Bấm **Deploy**. Vercel tự chạy `npm run vercel-build`: tạo / cập nhật bảng (`prisma migrate deploy`) rồi build. Mỗi lần đẩy code lên `main` sẽ tự triển khai lại.
+
+**4. Tạo tài khoản quản trị hệ thống** (một lần, trên máy của bạn, trỏ vào CSDL Neon)
+```bash
+DATABASE_URL="<DIRECT_URL>" DIRECT_URL="<DIRECT_URL>" npm run admin:create -- quantri "MatKhau-Manh-Toi-Thieu-10-Ky-Tu"
+```
+Đăng nhập trang web bằng tài khoản này → **Đơn vị** → tạo trường / trung tâm và tài khoản quản trị của đơn vị.
+*Không* chạy `db:seed` trên CSDL thật (dữ liệu mẫu có mật khẩu công khai — script tự từ chối khi `NODE_ENV=production`).
+
+**5. Quy trình đầu năm** của mỗi đơn vị: Cài đặt (loại đơn vị, mật khẩu mặc định) → tạo năm học → nhập giáo viên từ Excel
+(kèm lớp chủ nhiệm) → nhập học sinh toàn trường từ Excel → GVCN in phiếu tài khoản phát cho học sinh, phụ huynh.
+
+**Tự vận hành trên máy chủ riêng** (VPS / máy chủ trường): PostgreSQL + `npm ci && npm run db:deploy && npm run build && npm start`,
+đặt sau Nginx có HTTPS (bắt buộc cho PWA và thông báo đẩy). Thay đổi cấu trúc bảng về sau: `npm run db:migrate -- --name <tên>` khi phát triển,
+`npm run db:deploy` khi triển khai.
 
 ## Kiến trúc
 
-- **Next.js 15** (App Router, Server Components, Server Actions) + **Prisma** + SQLite (dev) / PostgreSQL (prod)
+- **Next.js 15** (App Router, Server Components, Server Actions) + **Prisma** + **PostgreSQL** (migration trong `prisma/migrations`)
 - Đăng nhập: JWT ký HS256 trong cookie httpOnly, mật khẩu băm bcrypt
 - Phân quyền tập trung ở `src/lib/auth.ts` (`requireClassAccess`, `requireStudentAccess`, `requireSchoolAdmin`): mọi trang và action đều kiểm tra quyền phía server; truy cập lớp/trường khác trả về 404
 - Mọi bảng nghiệp vụ gắn `schoolId` → mở rộng sang trường mới chỉ là thêm một bản ghi `School`

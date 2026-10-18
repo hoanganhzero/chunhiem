@@ -1,15 +1,17 @@
 // Mô hình đa trường (multi-tenant): mọi dữ liệu nghiệp vụ đều gắn với một School.
-// Dev dùng SQLite; khi triển khai thật đổi provider sang "postgresql" và DATABASE_URL.
-// Các trường kiểu "enum" lưu dạng String để chạy được trên cả SQLite và PostgreSQL
-// (giá trị hợp lệ định nghĩa trong src/lib/constants.ts).
+// CSDL: PostgreSQL (Neon / Supabase / máy chủ riêng). Thay đổi cấu trúc bảng qua prisma/migrations.
+// Các trường kiểu "enum" lưu dạng String (giá trị hợp lệ định nghĩa trong src/lib/constants.ts).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Kết nối qua bộ gom kết nối (pooler) — dùng khi chạy ứng dụng (Vercel / serverless)
+  url       = env("DATABASE_URL")
+  // Kết nối trực tiếp — dùng khi chạy migration
+  directUrl = env("DIRECT_URL")
 }
 
 model School {

@@ -9,6 +9,9 @@ import { StudentFields } from "@/components/StudentFields";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { createStudent, importStudents } from "@/actions/classroom";
 
+// Nhập danh sách lớp có thể lâu hơn giới hạn mặc định của máy chủ serverless
+export const maxDuration = 60;
+
 export default async function ClassPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { cls } = await requireClassAccess(id);

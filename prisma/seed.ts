@@ -6,6 +6,11 @@ const db = new PrismaClient();
 const DEFAULT_PASSWORD = "12345678";
 
 async function main() {
+  // Dữ liệu mẫu có mật khẩu ai cũng biết — không cho nạp vào CSDL thật nếu không chủ động cho phép
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "1") {
+    console.error("Từ chối nạp dữ liệu mẫu khi NODE_ENV=production. Đặt ALLOW_DEMO_SEED=1 nếu thực sự muốn (vd. bản chạy thử).");
+    process.exit(1);
+  }
   const hash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
 
   await db.user.upsert({

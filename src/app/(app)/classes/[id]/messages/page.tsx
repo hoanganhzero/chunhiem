@@ -6,6 +6,9 @@ import { ClassHeader } from "@/components/ClassHeader";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { deleteAnnouncement, postAnnouncement, sendPeriodicReports } from "@/actions/messages";
 
+// Gửi báo cáo định kỳ cho cả lớp có thể lâu hơn giới hạn mặc định của máy chủ serverless
+export const maxDuration = 60;
+
 export default async function MessagesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { cls } = await requireClassAccess(id);

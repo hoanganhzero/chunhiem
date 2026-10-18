@@ -6,6 +6,9 @@ import { Empty, PageHeader } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { deleteSchoolAnnouncement, postSchoolAnnouncement } from "@/actions/school";
 
+// Gửi thông báo toàn trường có thể lâu hơn giới hạn mặc định của máy chủ serverless
+export const maxDuration = 60;
+
 export const metadata = { title: "Thông báo" };
 
 export default async function SchoolAnnouncementsPage() {

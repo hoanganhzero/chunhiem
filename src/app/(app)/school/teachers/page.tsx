@@ -5,6 +5,9 @@ import { PageHeader } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { createTeacher, importTeachers, resetPasswordToDefault, toggleTeacher } from "@/actions/school";
 
+// Nhập danh sách giáo viên có thể lâu hơn giới hạn mặc định của máy chủ serverless
+export const maxDuration = 60;
+
 export default async function TeachersPage() {
   const { user, schoolId } = await requireSchoolAdmin();
   const [school, teachers] = await Promise.all([

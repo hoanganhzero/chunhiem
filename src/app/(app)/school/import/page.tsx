@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { importSchoolStudents } from "@/actions/school";
 
+// Nhập hàng nghìn học sinh có thể lâu hơn giới hạn mặc định của máy chủ serverless
+export const maxDuration = 60;
+
 export default async function SchoolImportPage() {
   const { schoolId } = await requireSchoolAdmin();
   const [school, year] = await Promise.all([
