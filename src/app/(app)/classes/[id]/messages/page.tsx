@@ -19,6 +19,13 @@ export default async function MessagesPage({ params }: { params: Promise<{ id: s
       },
     }),
   ]);
+  // Báo cáo định kỳ gần nhất của từng em — phụ huynh đã xác nhận chưa
+  const reports = await db.message.findMany({
+    where: { kind: "REPORT", student: { classId: cls.id } }, orderBy: { createdAt: "desc" }, select: { studentId: true, ackAt: true, createdAt: true },
+  });
+  const latestReport = new Map<string, (typeof reports)[number]>();
+  for (const r of reports) if (!latestReport.has(r.studentId)) latestReport.set(r.studentId, r);
+  const acked = [...latestReport.values()].filter((r) => r.ackAt).length;
   students.sort((a, b) =>
     b._count.messages - a._count.messages ||
     (b.messages[0]?.createdAt.getTime() ?? 0) - (a.messages[0]?.createdAt.getTime() ?? 0) ||
@@ -57,10 +64,17 @@ export default async function MessagesPage({ params }: { params: Promise<{ id: s
       </div>
 
       <div className="card">
-        <h2>💬 Trao đổi với phụ huynh</h2>
+        <div className="card-head">
+          <h2>💬 Trao đổi với phụ huynh</h2>
+          {latestReport.size > 0 && (
+            <span className={`badge ${acked === latestReport.size ? "ok" : "warn"}`}>
+              Báo cáo gần nhất: {acked}/{latestReport.size} phụ huynh đã xác nhận
+            </span>
+          )}
+        </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Học sinh</th><th>Phụ huynh</th><th>Tin gần nhất</th><th></th></tr></thead>
+            <thead><tr><th>Học sinh</th><th>Phụ huynh</th><th>Báo cáo tuần</th><th>Tin gần nhất</th><th></th></tr></thead>
             <tbody>
               {students.map((s) => {
                 const last = s.messages[0];
@@ -68,6 +82,13 @@ export default async function MessagesPage({ params }: { params: Promise<{ id: s
                   <tr key={s.id}>
                     <td><strong>{s.fullName}</strong></td>
                     <td className="small">{s.parentName}<div className="muted">{s.parentPhone && <a href={`tel:${s.parentPhone}`}>{s.parentPhone}</a>}</div></td>
+                    <td>
+                      {(() => {
+                        const r = latestReport.get(s.id);
+                        if (!r) return <span className="muted small">—</span>;
+                        return r.ackAt ? <span className="badge ok">✓ Đã xem</span> : <span className="badge warn">Chưa xem</span>;
+                      })()}
+                    </td>
                     <td className="small">
                       {last ? <>{last.fromFamily ? "PH: " : "Bạn: "}{last.content.slice(0, 70)}{last.content.length > 70 ? "…" : ""} <span className="muted">· {fmtDate(last.createdAt)}</span></> : <span className="muted">—</span>}
                     </td>

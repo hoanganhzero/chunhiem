@@ -26,7 +26,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
           {messages.length === 0 && <p className="muted">Chưa có trao đổi.</p>}
           {messages.map((m) => (
             <div key={m.id} className={`bubble ${m.fromFamily ? "them" : "me"}`}>
-              {m.content}
+              {m.kind === "REPORT" && <div className="badge" style={{ marginBottom: 6 }}>📝 Báo cáo định kỳ</div>}
+              <div>{m.content}</div>
+              {m.kind === "REPORT" && (
+                <div className="meta" style={{ fontWeight: 600 }}>
+                  {m.ackAt ? `✓ Phụ huynh đã xác nhận lúc ${m.ackAt.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}` : "Phụ huynh chưa xác nhận"}
+                </div>
+              )}
               <div className="meta">{m.sender?.name} · {m.createdAt.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}{!m.fromFamily && (m.read ? " · Đã xem" : "")}</div>
             </div>
           ))}

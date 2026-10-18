@@ -82,6 +82,10 @@ export default async function EmulationSetupPage({ params }: { params: Promise<{
 
       <div className="card">
         <h2>3. Tiêu chí thi đua</h2>
+        <p className="small muted" style={{ marginTop: 0 }}>
+          ⚡ “Vắng học không phép” và “Đi học muộn” <strong>tự trừ điểm khi điểm danh</strong> — sửa điểm danh thì điểm tự điều chỉnh, không trừ hai lần.
+          Đổi số điểm hoặc bỏ dấu “Dùng” để tắt tự động.
+        </p>
         <ActionForm action={saveCriterion} className="inline" resetOnSuccess>
           <input type="hidden" name="classId" value={cls.id} />
           <div className="field" style={{ flex: "1 1 240px" }}><label>Tiêu chí mới</label><input name="name" required placeholder="vd: Đạt điểm 10 môn Toán" /></div>
@@ -99,6 +103,7 @@ export default async function EmulationSetupPage({ params }: { params: Promise<{
                 <select name="category" defaultValue={c.category} style={{ width: "auto" }}>{Object.entries(EMU_CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
                 <input name="points" type="number" defaultValue={c.points} min={-20} max={20} style={{ width: 80 }} aria-label="Điểm" />
                 <label className="small"><input type="checkbox" name="active" defaultChecked={c.active} /> Dùng</label>
+                {c.auto && <span className="badge" title="Tự trừ điểm khi GVCN điểm danh">⚡ Tự động khi điểm danh</span>}
                 <SubmitButton className="secondary sm">Lưu</SubmitButton>
               </div>
             </ActionForm>

@@ -23,13 +23,46 @@ export function weekFromParam(p: string | undefined) {
   return weekStart();
 }
 
-/** Tạo bộ tiêu chí mặc định cho lớp nếu chưa có. */
+/** Tiêu chí tự áp dụng khi điểm danh (GVCN chỉnh điểm hoặc tắt được trong phần Tiêu chí). */
+export const AUTO_CRITERIA = [
+  { auto: "UNEXCUSED", name: "Vắng học không phép", points: -5 },
+  { auto: "LATE", name: "Đi học muộn", points: -2 },
+] as const;
+
+/** Tạo bộ tiêu chí mặc định cho lớp nếu chưa có, và bảo đảm có 2 tiêu chí tự động theo điểm danh. */
 export async function ensureCriteria(classId: string) {
   const n = await db.emulationCriterion.count({ where: { classId } });
-  if (n) return;
-  await db.emulationCriterion.createMany({
-    data: DEFAULT_CRITERIA.map(([name, category, points], order) => ({ classId, name, category, points, order })),
+  if (!n) {
+    await db.emulationCriterion.createMany({
+      data: DEFAULT_CRITERIA.map(([name, category, points], order) => ({ classId, name, category, points, order })),
+    });
+  }
+  for (const a of AUTO_CRITERIA) {
+    if (await db.emulationCriterion.count({ where: { classId, auto: a.auto } })) continue;
+    const same = await db.emulationCriterion.findFirst({ where: { classId, name: a.name } });
+    if (same) await db.emulationCriterion.update({ where: { id: same.id }, data: { auto: a.auto } });
+    else await db.emulationCriterion.create({ data: { classId, name: a.name, category: "NE_NEP", points: a.points, auto: a.auto, order: -1 } });
+  }
+}
+
+/**
+ * Đồng bộ điểm thi đua tự động theo điểm danh của một ngày: vắng không phép / đi muộn → trừ điểm.
+ * Ghi lại toàn bộ ghi nhận tự động của ngày đó, nên sửa điểm danh (vd. muộn → có mặt) sẽ tự hoàn điểm, không trừ hai lần.
+ */
+export async function syncAttendanceEmulation(classId: string, date: Date, statuses: Map<string, string>, byUserId: string) {
+  await ensureCriteria(classId);
+  const rules = await db.emulationCriterion.findMany({ where: { classId, active: true, auto: { not: null } } });
+  const data = [...statuses].flatMap(([studentId, status]) => {
+    const c = rules.find((r) => r.auto === status);
+    return c
+      ? [{ classId, studentId, criterionId: c.id, label: c.name, category: c.category, points: c.points, date,
+           status: "APPROVED", source: "ATTENDANCE", note: "Tự động từ điểm danh", recordedById: byUserId }]
+      : [];
   });
+  await db.$transaction([
+    db.emulationRecord.deleteMany({ where: { classId, date, source: "ATTENDANCE", studentId: { in: [...statuses.keys()] } } }),
+    db.emulationRecord.createMany({ data }),
+  ]);
 }
 
 /**

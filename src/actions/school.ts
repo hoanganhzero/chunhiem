@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireSchoolAdmin, type CurrentUser } from "@/lib/auth";
+import { notify } from "@/lib/notify";
 import { SCHOOL_TYPES, SCHOOL_VIEW_ROLES, type Role } from "@/lib/constants";
 import { provisionStudents, resetToDefault, summarize, type ProvisionItem } from "@/lib/accounts";
 import { STUDENT_COLUMNS, TEACHER_COLUMNS, normKey, readTable, toStudentInput } from "@/lib/excel";
@@ -301,6 +302,8 @@ export async function postSchoolAnnouncement(_: ActionResult, form: FormData): P
   const content = str(form, "content");
   if (!title || !content) return { error: "Nhập tiêu đề và nội dung" };
   await db.announcement.create({ data: { schoolId, classId: null, authorId: user.id, title, content } });
+  const everyone = await db.user.findMany({ where: { schoolId, active: true, id: { not: user.id } }, select: { id: true } });
+  await notify(everyone.map((u) => u.id), { kind: "ANNOUNCE", title: `📢 ${title}`, body: content.slice(0, 160), url: "/dashboard" });
   revalidatePath("/school/announcements");
   return { ok: "Đã gửi thông báo đến toàn bộ giáo viên, học sinh và phụ huynh" };
 }

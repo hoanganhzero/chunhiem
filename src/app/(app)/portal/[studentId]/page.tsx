@@ -9,6 +9,8 @@ import { toDay } from "@/lib/utils";
 import { StudentRecord } from "@/components/StudentRecord";
 import { Icon } from "@/components/Icon";
 import { StatCard } from "@/components/ui";
+import { PushBanner } from "@/components/Push";
+import { vapidPublicKey } from "@/lib/notify";
 
 export const metadata = { title: "Kết quả học tập" };
 
@@ -65,6 +67,9 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
+      {user.role === "PARENT" && (
+        <PushBanner vapidKey={vapidPublicKey} text="Biết ngay khi con vắng học, đi muộn, được khen hay khi GVCN nhắn tin." />
+      )}
       <h2 style={{ margin: "4px 0 10px" }}>{period.label}</h2>
       <div className="grid stats">
         <StatCard icon="attendance" tone={a("UNEXCUSED") ? "danger" : "ok"} value={a("EXCUSED") + a("UNEXCUSED")} label="Buổi vắng"

@@ -29,6 +29,20 @@ Hỗ trợ **Trường THPT / THCS** và **Trung tâm GDNN-GDTX**: chọn loại
   điểm môn HK I → HK II), biểu đồ điểm thi đua 8 tuần, **mục tiêu rèn luyện** GVCN đặt, nhật ký thi đua.
 - **Báo cáo định kỳ** gửi phụ huynh tự kèm điểm thi đua, huy hiệu, ưu điểm, điều cần cố gắng và mục tiêu đang thực hiện.
 
+### Thông báo đẩy & phụ huynh đồng hành
+- **Thông báo đẩy (Web Push)** tới điện thoại + **hộp thông báo trong ứng dụng** (chuông, đếm tin chưa đọc):
+  - Phụ huynh: con **vắng học / đi muộn** (chỉ gửi khi trạng thái thay đổi — lưu lại điểm danh không gửi trùng), **được khen**,
+    **bị nhắc nhở**, tin nhắn GVCN, báo cáo định kỳ, mục tiêu mới, thông báo lớp / trường.
+  - GVCN: phụ huynh nhắn tin, **xác nhận đã xem báo cáo**, **cam kết đồng hành** / góp ý mục tiêu.
+  - Mỗi người tự chọn loại thông báo muốn nhận (Tài khoản → Thông báo), bật / tắt / gửi thử theo từng thiết bị.
+  - iPhone: cần “Thêm vào MH chính” rồi mở từ màn hình chính (iOS 16.4+). Thiết bị đã gỡ đăng ký được tự dọn.
+  - Thông báo đẩy được gửi **sau khi** trả kết quả cho giáo viên nên không làm chậm thao tác.
+- **Tự trừ điểm thi đua theo điểm danh**: vắng không phép −5, đi muộn −2 (GVCN đổi điểm / tắt trong Tiêu chí).
+  Sửa điểm danh thì điểm tự điều chỉnh, không trừ hai lần; hai tiêu chí này không xuất hiện ở phần ghi tay.
+- **Phụ huynh xác nhận báo cáo tuần** (“✓ Đã xem báo cáo” + phản hồi tuỳ chọn). GVCN thấy cột “Báo cáo tuần: Đã xem / Chưa xem”
+  và tổng “x/y phụ huynh đã xác nhận”.
+- **Cam kết đồng hành với mục tiêu**: phụ huynh / học sinh bấm “Cam kết” hoặc gửi góp ý cách gia đình hỗ trợ; GVCN thấy ngay tại hồ sơ học sinh.
+
 ### Giao diện & ứng dụng điện thoại (PWA)
 - Font **Be Vietnam Pro**, bộ icon Lucide, **chế độ tối** tự động theo điện thoại / máy tính.
 - Máy tính: thanh menu bên trái theo vai trò. Điện thoại: **thanh điều hướng dưới đáy** như app + menu “Thêm” trượt lên.
@@ -97,7 +111,8 @@ Tài khoản mẫu:
 
 1. **CSDL PostgreSQL** (Neon, Supabase, hoặc máy chủ trường): trong `prisma/schema.prisma` đổi `provider = "postgresql"`, đặt `DATABASE_URL`.
 2. **Hosting**: Vercel / Railway / Render, hoặc VPS chạy `npm run build && npm start` sau Nginx + HTTPS.
-3. Biến môi trường: `DATABASE_URL`, `AUTH_SECRET`.
+3. Biến môi trường: `DATABASE_URL`, `AUTH_SECRET`, và cho thông báo đẩy `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
+   (tạo khoá: `npx web-push generate-vapid-keys`; **giữ nguyên khoá** sau khi triển khai, đổi khoá sẽ làm mất đăng ký của mọi thiết bị).
 4. Chạy `npx prisma db push` (về sau nên chuyển sang `prisma migrate`) rồi tạo tài khoản quản trị hệ thống.
 5. Quy trình đầu năm: quản trị trường tạo năm học → tạo tài khoản GV → tạo lớp & phân công GVCN → GVCN nhập danh sách lớp từ CSV.
 
@@ -118,7 +133,7 @@ src/app/(app)/              các trang sau đăng nhập
 ## Lộ trình mở rộng gợi ý
 
 - Phân công giáo viên bộ môn tự nhập điểm môn mình dạy; nhập điểm từ Excel
-- Thông báo đẩy (Web Push) trên điện thoại khi có tin nhắn / điểm danh vắng; Zalo OA / SMS / email
+- Gửi thêm qua Zalo OA / SMS / email cho phụ huynh không dùng ứng dụng
 - Lên lớp đầu năm: chuyển học sinh sang lớp của năm học mới
 - Báo cáo tổng hợp toàn trường cho BGH
 - Nhật ký thao tác (audit log), đăng nhập Google Workspace của trường

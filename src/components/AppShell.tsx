@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookMarked, KeyRound, LogOut } from "lucide-react";
+import { Bell, BookMarked, KeyRound, LogOut } from "lucide-react";
 import { Icon } from "./Icon";
 import type { Nav, NavItem } from "@/lib/nav";
 
@@ -11,6 +11,7 @@ type Props = {
   nav: Nav;
   user: { name: string; role: string };
   unitName: string;
+  unread: number;
   logout: () => Promise<void>;
   children: React.ReactNode;
 };
@@ -31,7 +32,16 @@ function useActive(items: NavItem[]) {
   return match?.href;
 }
 
-export function AppShell({ nav, user, unitName, logout, children }: Props) {
+function BellLink({ unread }: { unread: number }) {
+  return (
+    <Link href="/notifications" className="bell" aria-label={`Thông báo${unread ? ` (${unread} chưa đọc)` : ""}`}>
+      <Bell size={20} />
+      {unread > 0 && <span className="dot">{unread > 99 ? "99+" : unread}</span>}
+    </Link>
+  );
+}
+
+export function AppShell({ nav, user, unitName, unread, logout, children }: Props) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
   const all = nav.groups.flatMap((g) => g.items);
@@ -50,6 +60,7 @@ export function AppShell({ nav, user, unitName, logout, children }: Props) {
           <div className="t-title">{APP_NAME}</div>
           <div className="t-sub">{unitName}</div>
         </div>
+        <BellLink unread={unread} />
         <Link href="/account" className="avatar" aria-label="Tài khoản">{initials(user.name)}</Link>
       </header>
 
@@ -61,6 +72,7 @@ export function AppShell({ nav, user, unitName, logout, children }: Props) {
             <div className="brand-name">{APP_NAME}</div>
             <div className="brand-sub">{unitName}</div>
           </div>
+          <BellLink unread={unread} />
         </div>
         <div className="nav-scroll">
           {nav.groups.map((g, i) => (

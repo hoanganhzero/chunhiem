@@ -5,6 +5,7 @@ import type { buildProgress } from "@/lib/progress";
 import { EMU_CATEGORIES } from "@/lib/constants";
 import { fmtDate } from "@/lib/utils";
 import { Empty } from "./ui";
+import { GoalRespond } from "./GoalRespond";
 
 type Progress = Awaited<ReturnType<typeof buildProgress>>;
 
@@ -71,7 +72,10 @@ export function WeekTrend({ weekly }: { weekly: { start: Date; points: number }[
 }
 
 /** Ưu điểm — cần cố gắng — chuyển biến — huy hiệu — mục tiêu — nhật ký: phần lõi trang "Tiến bộ". */
-export function ProgressView({ p, learner = "con" }: { p: Progress; learner?: string }) {
+export function ProgressView({
+  p, learner = "con", viewerId, viewerRole,
+}: { p: Progress; learner?: string; viewerId?: string; viewerRole?: string }) {
+  const canRespond = viewerRole === "PARENT" || viewerRole === "STUDENT";
   return (
     <>
       {p.badges.length > 0 && (
@@ -142,6 +146,19 @@ export function ProgressView({ p, learner = "con" }: { p: Progress; learner?: st
                 <div className="li-body">
                   <div className="li-title">{g.title}</div>
                   {g.dueDate && <div className="li-meta">Hạn: {fmtDate(g.dueDate)}</div>}
+                  {g.comments.length > 0 && (
+                    <ul className="goal-comments">
+                      {g.comments.map((c) => (
+                        <li key={c.id}>
+                          {c.kind === "COMMIT" ? "🤝" : "💬"} <strong>{c.user?.role === "PARENT" ? "Phụ huynh" : c.user?.role === "STUDENT" ? "Học sinh" : c.user?.name}</strong>: {c.content}
+                          <span className="muted"> · {fmtDate(c.createdAt)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {canRespond && g.status === "ACTIVE" && (
+                    <GoalRespond goalId={g.id} committed={g.comments.some((c) => c.kind === "COMMIT" && c.user?.id === viewerId)} parent={viewerRole === "PARENT"} />
+                  )}
                 </div>
                 {g.status === "DONE" ? <span className="badge ok">Đã đạt</span> : g.status === "MISSED" ? <span className="badge warn">Chưa đạt</span> : <span className="badge">Đang thực hiện</span>}
               </div>

@@ -56,7 +56,7 @@ export default async function ProgressPage({ params }: { params: Promise<{ stude
         {" "}<Link href={`/portal/${student.id}/messages`}>{isParent ? "Trao đổi với GVCN →" : "Xem thông báo →"}</Link>
       </p>
 
-      <ProgressView p={progress} learner={who} />
+      <ProgressView p={progress} learner={who} viewerId={user.id} viewerRole={user.role} />
 
       <div className="grid two">
         <div className="card">

@@ -29,7 +29,10 @@ export async function buildProgress(studentId: string, boards?: { last: Leaderbo
     db.conductRecord.findMany({ where: { studentId, date: { gte: d60, lt: tomorrow } } }),
     db.subject.findMany({ where: { schoolId: student.schoolId, active: true }, orderBy: { order: "asc" } }),
     db.grade.findMany({ where: { studentId, academicYearId: student.class.academicYearId } }),
-    db.goal.findMany({ where: { studentId }, orderBy: [{ status: "asc" }, { createdAt: "desc" }] }),
+    db.goal.findMany({
+      where: { studentId }, orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      include: { comments: { orderBy: { createdAt: "asc" }, include: { user: { select: { id: true, name: true, role: true } } } } },
+    }),
     boards?.last ?? leaderboard(student.classId, new Date(thisWeek.getTime() - 7 * DAY)),
     boards?.prev ?? leaderboard(student.classId, new Date(thisWeek.getTime() - 14 * DAY)),
   ]);
@@ -44,7 +47,8 @@ export async function buildProgress(studentId: string, boards?: { last: Leaderbo
   // Tần suất từng tiêu chí trong 30 ngày
   const freq = (pos: boolean) => {
     const m = new Map<string, number>();
-    for (const r of recs) if (inRange(r.date, cur) && (r.points > 0) === pos) m.set(r.label, (m.get(r.label) ?? 0) + 1);
+    // Bỏ qua ghi nhận tự động từ điểm danh — vắng / muộn đã được thống kê riêng, tránh liệt kê trùng
+    for (const r of recs) if (r.source !== "ATTENDANCE" && inRange(r.date, cur) && (r.points > 0) === pos) m.set(r.label, (m.get(r.label) ?? 0) + 1);
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   };
   const positives = freq(true);
@@ -65,7 +69,7 @@ export async function buildProgress(studentId: string, boards?: { last: Leaderbo
   const count = <T extends { date: Date }>(xs: T[], r: { gte: Date; lt: Date }, f: (x: T) => boolean) => xs.filter((x) => inRange(x.date, r) && f(x)).length;
   const absent = (x: { status: string }) => x.status === "EXCUSED" || x.status === "UNEXCUSED";
   const late = (x: { status: string }) => x.status === "LATE";
-  const negRec = (x: { points: number }) => x.points < 0;
+  const negRec = (x: { points: number; source: string }) => x.points < 0 && x.source !== "ATTENDANCE";
   const posRec = (x: { points: number }) => x.points > 0;
 
   const changes: Change[] = [

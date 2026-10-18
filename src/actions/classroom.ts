@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { requireClassAccess, requireStudentAccess } from "@/lib/auth";
 import { ATTENDANCE, CONDUCT_TYPES, GENDERS, RATINGS, STUDENT_STATUS } from "@/lib/constants";
 import { optStr, parseDob, str, toDay } from "@/lib/utils";
+import { syncAttendanceEmulation } from "@/lib/emulation";
+import { notifyFamily, notifyRecords } from "@/lib/notify";
 import { provisionStudents, resetToDefault, summarize, type ProvisionItem } from "@/lib/accounts";
 import { STUDENT_COLUMNS, readTable, toStudentInput } from "@/lib/excel";
 import type { ActionResult } from "./types";
@@ -101,15 +103,23 @@ export async function resetFamilyPassword(_: ActionResult, form: FormData): Prom
 }
 
 export async function saveAttendance(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const { cls } = await requireClassAccess(str(form, "classId"));
+  const { user, cls } = await requireClassAccess(str(form, "classId"));
   const date = new Date(str(form, "date") + "T00:00:00Z");
   if (isNaN(date.getTime())) return { error: "Ngày không hợp lệ" };
   if (date > toDay()) return { error: "Không thể điểm danh cho ngày trong tương lai" };
-  const students = await db.student.findMany({ where: { classId: cls.id, status: "ACTIVE" }, select: { id: true } });
-  await db.$transaction(
+  const [students, before] = await Promise.all([
+    db.student.findMany({ where: { classId: cls.id, status: "ACTIVE" }, select: { id: true, fullName: true, userId: true, parentUserId: true } }),
+    db.attendance.findMany({ where: { classId: cls.id, date }, select: { studentId: true, status: true } }),
+  ]);
+  const statuses = new Map(
     students.map((s) => {
       const raw = str(form, `status_${s.id}`);
-      const status = raw in ATTENDANCE ? raw : "PRESENT";
+      return [s.id, raw in ATTENDANCE ? raw : "PRESENT"] as const;
+    }),
+  );
+  await db.$transaction(
+    students.map((s) => {
+      const status = statuses.get(s.id)!;
       const note = optStr(form, `note_${s.id}`);
       return db.attendance.upsert({
         where: { studentId_date: { studentId: s.id, date } },
@@ -118,8 +128,32 @@ export async function saveAttendance(_: ActionResult, form: FormData): Promise<A
       });
     }),
   );
+  // Tự trừ điểm thi đua: vắng không phép, đi muộn
+  await syncAttendanceEmulation(cls.id, date, statuses, user.id);
+
+  // Báo phụ huynh khi con vắng / đi muộn — chỉ khi trạng thái thay đổi (lưu lại không gửi trùng)
+  const prev = new Map(before.map((b) => [b.studentId, b.status]));
+  const dateText = date.toLocaleDateString("vi-VN", { timeZone: "UTC", weekday: "long", day: "numeric", month: "numeric" });
+  const msg: Record<string, [string, string]> = {
+    UNEXCUSED: ["❗", "vắng học không phép"],
+    EXCUSED: ["📅", "vắng học có phép"],
+    LATE: ["⏰", "đi học muộn"],
+  };
+  let notified = 0;
+  for (const s of students) {
+    const st = statuses.get(s.id)!;
+    if (!msg[st] || prev.get(s.id) === st) continue;
+    const note = optStr(form, `note_${s.id}`);
+    await notifyFamily(s, {
+      kind: "ATTENDANCE",
+      title: `${msg[st][0]} ${s.fullName} ${msg[st][1]}`,
+      body: `${dateText}, lớp ${cls.name}${note ? ` — ${note}` : ""}. Phụ huynh có thể nhắn GVCN ngay trong ứng dụng.`,
+      path: "/messages",
+    });
+    notified++;
+  }
   revalidatePath(`/classes/${cls.id}`);
-  return { ok: "Đã lưu điểm danh" };
+  return { ok: `Đã lưu điểm danh${notified ? ` · đã báo ${notified} phụ huynh` : ""}` };
 }
 
 export async function addConductRecord(_: ActionResult, form: FormData): Promise<ActionResult> {
@@ -130,6 +164,7 @@ export async function addConductRecord(_: ActionResult, form: FormData): Promise
   if (!(type in CONDUCT_TYPES) || !content) return { error: "Vui lòng chọn loại và nhập nội dung" };
   const points = Math.abs(Number(str(form, "points")) || 0) * (type === "VIOLATION" ? -1 : 1);
   await db.conductRecord.create({ data: { studentId: student.id, type, content, date, points, createdById: user.id } });
+  await notifyRecords([{ studentId: student.id, label: content, points, positive: type === "PRAISE" }]);
   revalidatePath(`/classes/${student.classId}/conduct`);
   revalidatePath(`/students/${student.id}`);
   return { ok: "Đã ghi nhận" };

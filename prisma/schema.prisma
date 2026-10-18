@@ -62,6 +62,11 @@ model User {
   messages        Message[]
   emulations      EmulationRecord[] @relation("EmulationRecorder")
   goals           Goal[]            @relation("GoalCreator")
+  goalComments    GoalComment[]
+  notifications   Notification[]
+  pushSubs        PushSubscription[]
+  // Các loại thông báo người dùng đã tắt, cách nhau bởi dấu phẩy (vd "ANNOUNCE,PRAISE")
+  notifyOff       String            @default("")
 
   @@index([schoolId])
 }
@@ -248,6 +253,9 @@ model Message {
   fromFamily Boolean // true = phụ huynh gửi, false = giáo viên gửi
   content    String
   read       Boolean  @default(false) // người nhận đã đọc
+  // CHAT = tin nhắn thường | REPORT = báo cáo định kỳ (phụ huynh bấm "Đã xem" → ackAt)
+  kind       String    @default("CHAT")
+  ackAt      DateTime?
   createdAt  DateTime @default(now())
 
   @@index([studentId, createdAt])
@@ -287,6 +295,8 @@ model EmulationCriterion {
   points   Int // dương = cộng, âm = trừ
   active   Boolean           @default(true)
   order    Int               @default(0)
+  // Tự áp dụng khi điểm danh: UNEXCUSED (vắng không phép) | LATE (đi muộn)
+  auto     String?
   records  EmulationRecord[]
 
   @@index([classId])
@@ -307,6 +317,7 @@ model EmulationRecord {
   note         String?
   date         DateTime
   status       String              @default("APPROVED") // PENDING | APPROVED | REJECTED
+  source       String              @default("MANUAL") // MANUAL | ATTENDANCE (tự trừ khi điểm danh)
   recordedById String?
   recordedBy   User?               @relation("EmulationRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
   createdAt    DateTime            @default(now())
@@ -326,6 +337,52 @@ model Goal {
   createdById String?
   createdBy   User?     @relation("GoalCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime  @default(now())
+  comments    GoalComment[]
 
   @@index([studentId])
+}
+
+// Phản hồi của phụ huynh / học sinh với mục tiêu: COMMIT = cam kết đồng hành, COMMENT = ý kiến
+model GoalComment {
+  id        String   @id @default(cuid())
+  goalId    String
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  kind      String   @default("COMMENT")
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([goalId])
+}
+
+// ---------- Thông báo ----------
+
+// Hộp thông báo trong ứng dụng (luôn có) — đồng thời gửi thông báo đẩy nếu người dùng đã bật
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // ATTENDANCE | PRAISE | WARNING | MESSAGE | REPORT | GOAL | ANNOUNCE | FEEDBACK
+  title     String
+  body      String
+  url       String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+// Đăng ký nhận thông báo đẩy của một thiết bị (trình duyệt / PWA)
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

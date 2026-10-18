@@ -14,7 +14,7 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const { cls, student } = await requireStudentAccess(id);
   const [goals, progress] = await Promise.all([
-    db.goal.findMany({ where: { studentId: id }, orderBy: { createdAt: "desc" } }),
+    db.goal.findMany({ where: { studentId: id }, orderBy: { createdAt: "desc" }, include: { comments: { orderBy: { createdAt: "asc" } } } }),
     buildProgress(id),
   ]);
   const accounts = await db.student.findUniqueOrThrow({
@@ -81,7 +81,11 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
               <div key={g.id} className="list-item" style={{ alignItems: "center", flexWrap: "wrap" }}>
                 <div className="li-body">
                   <div className="li-title">{g.title}</div>
-                  <div className="li-meta">{g.dueDate ? `Hạn ${fmtDate(g.dueDate)}` : "Không đặt hạn"}</div>
+                  <div className="li-meta">
+                    {g.dueDate ? `Hạn ${fmtDate(g.dueDate)}` : "Không đặt hạn"}
+                    {g.comments.some((c) => c.kind === "COMMIT") ? " · 🤝 Gia đình đã cam kết" : " · Gia đình chưa cam kết"}
+                  </div>
+                  {g.comments.filter((c) => c.kind === "COMMENT").map((c) => <div key={c.id} className="small">💬 {c.content}</div>)}
                 </div>
                 <form action={setGoalStatus} style={{ display: "flex", gap: 6 }}>
                   <input type="hidden" name="id" value={g.id} />

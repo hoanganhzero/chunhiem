@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireClassAccess, requireStudentAccess, requireUser } from "@/lib/auth";
+import { requireClassAccess, requireFamilyAccess, requireStudentAccess, requireUser } from "@/lib/auth";
 import { CLASS_ROLES, EMU_CATEGORIES } from "@/lib/constants";
 import { ensureCriteria, recorderScope } from "@/lib/emulation";
 import { optStr, str, toDay } from "@/lib/utils";
+import { notifyFamily, notifyHomeroom, notifyRecords } from "@/lib/notify";
 import type { ActionResult } from "./types";
 
 function parseDate(form: FormData) {
@@ -50,6 +51,7 @@ export async function recordEmulation(_: ActionResult, form: FormData): Promise<
       note: optStr(form, "note"), date, status, recordedById: user.id,
     })),
   });
+  if (status === "APPROVED") await notifyRecords(ids.map((studentId) => ({ studentId, label: c.name, points: c.points })));
   revalidatePath(`/classes/${classId}/emulation`);
   const sign = c.points > 0 ? `+${c.points}` : `${c.points}`;
   return { ok: `Đã ghi “${c.name}” (${sign}) cho ${ids.length} bạn${status === "PENDING" ? " — chờ GVCN duyệt" : ""}` };
@@ -62,7 +64,9 @@ export async function reviewRecords(_: ActionResult, form: FormData): Promise<Ac
   const ids = form.getAll("rid").map(String);
   if (!ids.length) return { error: "Chưa chọn ghi nhận nào" };
   const where = { classId: cls.id, status: "PENDING", id: { in: ids } };
+  const pending = await db.emulationRecord.findMany({ where });
   const res = await db.emulationRecord.updateMany({ where, data: { status: approve ? "APPROVED" : "REJECTED" } });
+  if (approve) await notifyRecords(pending);
   revalidatePath(`/classes/${cls.id}/emulation`);
   return { ok: `Đã ${approve ? "duyệt" : "từ chối"} ${res.count} ghi nhận` };
 }
@@ -159,6 +163,7 @@ export async function saveGoal(_: ActionResult, form: FormData): Promise<ActionR
   await db.goal.create({
     data: { studentId: student.id, title, dueDate: due ? new Date(due + "T00:00:00Z") : null, createdById: user.id },
   });
+  await notifyFamily(student, { kind: "GOAL", title: `🎯 Mục tiêu mới cho ${student.fullName}`, body: `${title}. Gia đình có thể bấm “Cam kết đồng hành” trong mục Tiến bộ.`, path: "/progress" }, true);
   revalidatePath(`/students/${student.id}`);
   return { ok: "Đã đặt mục tiêu — phụ huynh và học sinh sẽ thấy trong mục Tiến bộ" };
 }
@@ -171,4 +176,28 @@ export async function setGoalStatus(form: FormData) {
   if (status === "delete") await db.goal.delete({ where: { id: goal.id } });
   else if (["ACTIVE", "DONE", "MISSED"].includes(status)) await db.goal.update({ where: { id: goal.id }, data: { status } });
   revalidatePath(`/students/${goal.studentId}`);
+}
+
+/** Phụ huynh / học sinh cam kết đồng hành hoặc góp ý cho một mục tiêu — GVCN nhận thông báo. */
+export async function commentGoal(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const goal = await db.goal.findUnique({ where: { id: str(form, "goalId") } });
+  if (!goal) return { error: "Không tìm thấy mục tiêu" };
+  const { user, student } = await requireFamilyAccess(goal.studentId);
+  const kind = str(form, "kind") === "COMMIT" ? "COMMIT" : "COMMENT";
+  const who = user.role === "PARENT" ? "Phụ huynh" : "Học sinh";
+  const content = str(form, "content") || (kind === "COMMIT"
+    ? user.role === "PARENT" ? "Gia đình cam kết đồng hành, nhắc nhở con thực hiện mục tiêu." : "Em cam kết cố gắng thực hiện mục tiêu."
+    : "");
+  if (!content) return { error: "Nhập nội dung" };
+  if (kind === "COMMIT" && (await db.goalComment.count({ where: { goalId: goal.id, userId: user.id, kind: "COMMIT" } })))
+    return { error: "Bạn đã cam kết với mục tiêu này" };
+  await db.goalComment.create({ data: { goalId: goal.id, userId: user.id, kind, content } });
+  await notifyHomeroom(student.id, {
+    kind: "FEEDBACK",
+    title: `${kind === "COMMIT" ? "🤝" : "💬"} ${who} ${student.fullName} ${kind === "COMMIT" ? "cam kết đồng hành" : "góp ý"}`,
+    body: `Mục tiêu “${goal.title}”: ${content}`.slice(0, 180),
+    url: `/students/${student.id}`,
+  });
+  revalidatePath(`/portal/${student.id}/progress`);
+  return { ok: kind === "COMMIT" ? "Đã gửi cam kết tới GVCN" : "Đã gửi ý kiến tới GVCN" };
 }

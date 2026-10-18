@@ -27,7 +27,7 @@ export default async function RecordPage({ params }: { params: Promise<{ student
   }
   await ensureCriteria(student.classId);
   const [criteria, groups, mine] = await Promise.all([
-    db.emulationCriterion.findMany({ where: { classId: student.classId, active: true }, orderBy: { order: "asc" } }),
+    db.emulationCriterion.findMany({ where: { classId: student.classId, active: true, auto: null }, orderBy: { order: "asc" } }),
     db.classGroup.findMany({ where: { classId: student.classId } }),
     db.emulationRecord.findMany({
       where: { recordedById: user.id }, orderBy: { createdAt: "desc" }, take: 30, include: { student: { select: { fullName: true } } },

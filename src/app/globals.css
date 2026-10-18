@@ -630,3 +630,20 @@ button.link { background: none; border: 0; padding: 0; min-height: 0; color: var
   .pick-grid { grid-template-columns: 1fr 1fr; }
   .rank-pts .small { display: none; }
 }
+
+/* ---------------- Thông báo ---------------- */
+.push-banner { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-color: var(--primary); background: var(--primary-soft); }
+.bell { position: relative; display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; color: inherit; }
+.bell:hover { background: rgba(255, 255, 255, 0.1); text-decoration: none; }
+.bell .dot {
+  position: absolute; top: 2px; right: 0; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: 700;
+  border-radius: 999px; padding: 0 5px; line-height: 1.5; min-width: 17px; text-align: center;
+}
+.brand .bell { margin-left: auto; color: var(--nav-text); }
+.noti { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); color: inherit; }
+.noti:first-child { border-top: 0; }
+.noti:hover { text-decoration: none; background: var(--surface-2); }
+.noti.unread .li-title::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-right: 8px; vertical-align: 2px; }
+.ack-box { margin-top: 8px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
+.goal-comments { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 0.86rem; }
+.goal-comments li { color: var(--text-2); }

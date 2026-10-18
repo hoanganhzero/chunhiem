@@ -23,7 +23,7 @@ export default async function EmulationPage({
   const start = weekFromParam((await searchParams).tuan);
   const [board, criteria, students, pending, recent, groups] = await Promise.all([
     leaderboard(cls.id, start),
-    db.emulationCriterion.findMany({ where: { classId: cls.id, active: true }, orderBy: { order: "asc" } }),
+    db.emulationCriterion.findMany({ where: { classId: cls.id, active: true, auto: null }, orderBy: { order: "asc" } }),
     db.student.findMany({ where: { classId: cls.id, status: "ACTIVE" }, include: { group: true } }),
     db.emulationRecord.findMany({
       where: { classId: cls.id, status: "PENDING" }, orderBy: { createdAt: "asc" },
@@ -132,7 +132,7 @@ export default async function EmulationPage({
                   <span className={`pts-pill ${r.points > 0 ? "plus" : "minus"}`}>{sign(r.points)}</span>
                   <div className="li-body">
                     <div className="li-title">{r.student.fullName}</div>
-                    <div className="li-meta">{r.label} · {EMU_CATEGORIES[r.category as keyof typeof EMU_CATEGORIES]} · {fmtDate(r.date)} · {r.recordedBy?.name}</div>
+                    <div className="li-meta">{r.label} · {EMU_CATEGORIES[r.category as keyof typeof EMU_CATEGORIES]} · {fmtDate(r.date)} · {r.source === "ATTENDANCE" ? "tự động từ điểm danh" : r.recordedBy?.name}</div>
                   </div>
                   <form action={deleteEmulation}><input type="hidden" name="id" value={r.id} /><button className="ghost sm" title="Xoá">✕</button></form>
                 </div>

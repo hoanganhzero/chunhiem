@@ -4,6 +4,8 @@ import { terms } from "@/lib/constants";
 import { toDay } from "@/lib/utils";
 import type { CurrentUser } from "@/lib/auth";
 import { Empty, QuickAction } from "@/components/ui";
+import { PushBanner } from "@/components/Push";
+import { vapidPublicKey } from "@/lib/notify";
 
 export async function TeacherDashboard({ user }: { user: CurrentUser }) {
   const t = terms(user.schoolType);
@@ -31,6 +33,8 @@ export async function TeacherDashboard({ user }: { user: CurrentUser }) {
         <h1 style={{ margin: "4px 0 2px" }}>{greet}, {user.name.split(" ").pop()}!</h1>
         <div className="hero-sub">{user.schoolName}</div>
       </div>
+
+      <PushBanner vapidKey={vapidPublicKey} text="Nhận tin ngay khi phụ huynh nhắn tin, xác nhận báo cáo hay cam kết với mục tiêu của con." />
 
       {classes.length === 0 && (
         <div className="card"><Empty icon="school">Bạn chưa được phân công chủ nhiệm lớp nào trong năm học hiện tại.</Empty></div>

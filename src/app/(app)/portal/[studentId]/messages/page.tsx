@@ -5,7 +5,7 @@ import { terms } from "@/lib/constants";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { Empty, PageHeader } from "@/components/ui";
 import { Icon } from "@/components/Icon";
-import { familySendMessage } from "@/actions/messages";
+import { ackReport, familySendMessage } from "@/actions/messages";
 
 export const metadata = { title: "Liên lạc" };
 
@@ -39,8 +39,22 @@ export default async function PortalMessagesPage({ params }: { params: Promise<{
             {messages.length === 0 && <Empty icon="messages">Chưa có tin nhắn. Phụ huynh có thể xin phép cho con nghỉ, hỏi tình hình học tập… tại đây.</Empty>}
             {messages.map((m) => (
               <div key={m.id} className={`bubble ${m.fromFamily ? "me" : "them"}`}>
-                {m.content}
+                {m.kind === "REPORT" && <div className="badge" style={{ marginBottom: 6 }}>📝 Báo cáo định kỳ</div>}
+                <div>{m.content}</div>
                 <div className="meta">{m.fromFamily ? "Bạn" : m.sender?.name} · {ts(m.createdAt)}{m.fromFamily && m.read ? " · Đã xem" : ""}</div>
+                {m.kind === "REPORT" && (
+                  <div className="ack-box">
+                    {m.ackAt ? (
+                      <span className="small"><strong>✓ Đã xác nhận đã xem</strong> · {ts(m.ackAt)}</span>
+                    ) : (
+                      <ActionForm action={ackReport}>
+                        <input type="hidden" name="id" value={m.id} />
+                        <textarea name="feedback" rows={2} placeholder="Phản hồi cho GVCN (không bắt buộc), vd: Gia đình sẽ nhắc con ôn bài Toán mỗi tối." style={{ marginBottom: 8, minHeight: 60 }} />
+                        <SubmitButton className="sm">✓ Đã xem báo cáo</SubmitButton>
+                      </ActionForm>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
