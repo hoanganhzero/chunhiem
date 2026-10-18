@@ -17,14 +17,32 @@ export const NOTIFY_KINDS = {
 export type NotifyKind = keyof typeof NOTIFY_KINDS;
 export type Payload = { kind: NotifyKind; title: string; body: string; url?: string };
 
+/** Chuẩn Web Push chỉ nhận mailto: hoặc https: — nhập email trần thì tự thêm mailto:, giá trị khác dùng mặc định */
+function vapidSubject() {
+  const raw = process.env.VAPID_SUBJECT?.trim() ?? "";
+  if (/^(mailto:|https:\/\/)/i.test(raw)) return raw;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) return `mailto:${raw}`;
+  if (raw) console.warn("VAPID_SUBJECT phải là mailto:email hoặc https://… — đang dùng giá trị mặc định");
+  return "mailto:admin@example.com";
+}
+
 const vapid = {
-  publicKey: process.env.VAPID_PUBLIC_KEY ?? "",
-  privateKey: process.env.VAPID_PRIVATE_KEY ?? "",
-  subject: process.env.VAPID_SUBJECT ?? "mailto:admin@example.com",
+  publicKey: process.env.VAPID_PUBLIC_KEY?.trim() ?? "",
+  privateKey: process.env.VAPID_PRIVATE_KEY?.trim() ?? "",
+  subject: vapidSubject(),
 };
-export const pushEnabled = Boolean(vapid.publicKey && vapid.privateKey);
-if (pushEnabled) webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
-export const vapidPublicKey = vapid.publicKey;
+let configured = false;
+if (vapid.publicKey && vapid.privateKey) {
+  try {
+    webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
+    configured = true;
+  } catch (e) {
+    // Khoá dán sai (thiếu ký tự, có dấu nháy…) không được làm sập trang: chỉ tắt thông báo đẩy
+    console.error("Khoá VAPID không hợp lệ, tắt thông báo đẩy:", (e as Error).message);
+  }
+}
+export const pushEnabled = configured;
+export const vapidPublicKey = configured ? vapid.publicKey : "";
 
 /**
  * Gửi thông báo: lưu vào hộp thông báo trong ứng dụng, rồi gửi thông báo đẩy tới các thiết bị đã đăng ký.
