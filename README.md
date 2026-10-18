@@ -112,10 +112,11 @@ Tài khoản mẫu:
 
 ## Triển khai lên Vercel + Neon (miễn phí để bắt đầu)
 
-**1. Tạo CSDL PostgreSQL trên [Neon](https://neon.tech)** (chọn vùng Singapore cho gần Việt Nam)
-- Dashboard → **Connect** → bật *Connection pooling* → sao chép chuỗi kết nối → thêm `&pgbouncer=true` vào cuối → đây là **`DATABASE_URL`**.
-- Tắt *Connection pooling* → sao chép chuỗi kết nối → đây là **`DIRECT_URL`**.
-- Dùng Supabase thay Neon: *Transaction pooler* (cổng 6543) + `?pgbouncer=true` là `DATABASE_URL`; *Session pooler* / *Direct* (cổng 5432) là `DIRECT_URL`.
+**1. Cơ sở dữ liệu PostgreSQL** — cách nhanh nhất: trong dự án Vercel → tab **Storage** → *Create Database* → **Neon**
+(hoặc Supabase) → chọn vùng **Singapore** → *Connect* vào dự án. Vercel tự thêm chuỗi kết nối (`DATABASE_URL`,
+`DATABASE_URL_UNPOOLED` hoặc `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`) — ứng dụng tự nhận các tên này, không cần sao chép.
+
+Tự tạo CSDL bên ngoài thì đặt `DATABASE_URL` (chuỗi qua pooler, thêm `pgbouncer=true`) và `DIRECT_URL` (chuỗi trực tiếp).
 
 **2. Tạo khoá** (chạy trên máy có Node.js)
 ```bash
@@ -127,8 +128,7 @@ npx web-push generate-vapid-keys     # → VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
 
 | Biến | Giá trị |
 |---|---|
-| `DATABASE_URL` | chuỗi pooled ở bước 1 |
-| `DIRECT_URL` | chuỗi trực tiếp ở bước 1 (**bắt buộc** — thiếu sẽ báo lỗi *You must provide a nonempty direct URL*) |
+| `DATABASE_URL`, `DIRECT_URL` | chỉ khi **không** dùng tab Storage ở bước 1 |
 | `AUTH_SECRET` | chuỗi ở bước 2 |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | khoá ở bước 2 — **giữ nguyên mãi**, đổi khoá thì mọi thiết bị phải bật lại thông báo |
 | `VAPID_SUBJECT` | `mailto:email-cua-truong@...` |
@@ -137,7 +137,7 @@ Bấm **Deploy**. Vercel tự chạy `npm run vercel-build`: tạo / cập nhậ
 
 **4. Tạo tài khoản quản trị hệ thống** (một lần, trên máy của bạn, trỏ vào CSDL Neon)
 ```bash
-DATABASE_URL="<DIRECT_URL>" DIRECT_URL="<DIRECT_URL>" npm run admin:create -- quantri "MatKhau-Manh-Toi-Thieu-10-Ky-Tu"
+DATABASE_URL="<chuỗi kết nối trực tiếp>" npm run admin:create -- quantri "MatKhau-Manh-Toi-Thieu-10-Ky-Tu"
 ```
 Đăng nhập trang web bằng tài khoản này → **Đơn vị** → tạo trường / trung tâm và tài khoản quản trị của đơn vị.
 *Không* chạy `db:seed` trên CSDL thật (dữ liệu mẫu có mật khẩu công khai — script tự từ chối khi `NODE_ENV=production`).

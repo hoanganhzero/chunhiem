@@ -5,13 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "prisma generate && node scripts/db-env.mjs prisma migrate deploy && next build",
     "start": "next start",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
+    "db:deploy": "node scripts/db-env.mjs prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "admin:create": "tsx prisma/create-admin.ts",
+    "admin:create": "node scripts/db-env.mjs tsx prisma/create-admin.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
