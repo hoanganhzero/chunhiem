@@ -1,0 +1,146 @@
+// Mô hình đa trường (multi-tenant): mọi dữ liệu nghiệp vụ đều gắn với một School.
+// Dev dùng SQLite; khi triển khai thật đổi provider sang "postgresql" và DATABASE_URL.
+// Các trường kiểu "enum" lưu dạng String để chạy được trên cả SQLite và PostgreSQL
+// (giá trị hợp lệ định nghĩa trong src/lib/constants.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model School {
+  id        String   @id @default(cuid())
+  code      String   @unique // mã trường, dùng khi đăng nhập / định danh
+  name      String
+  address   String?
+  phone     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users         User[]
+  academicYears AcademicYear[]
+  classes       Class[]
+  students      Student[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  schoolId     String? // null = quản trị hệ thống (SUPER_ADMIN)
+  school       School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  email        String   @unique
+  name         String
+  phone        String?
+  passwordHash String
+  role         String // SUPER_ADMIN | SCHOOL_ADMIN | TEACHER
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  homeroomClasses Class[]         @relation("Homeroom")
+  conductRecords  ConductRecord[]
+
+  @@index([schoolId])
+}
+
+model AcademicYear {
+  id        String  @id @default(cuid())
+  schoolId  String
+  school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name      String // vd: 2026-2027
+  isCurrent Boolean @default(false)
+
+  classes     Class[]
+  evaluations ConductEvaluation[]
+
+  @@unique([schoolId, name])
+}
+
+model Class {
+  id                String       @id @default(cuid())
+  schoolId          String
+  school            School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYearId    String
+  academicYear      AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  name              String // vd: 10A1
+  grade             Int
+  homeroomTeacherId String?
+  homeroomTeacher   User?        @relation("Homeroom", fields: [homeroomTeacherId], references: [id], onDelete: SetNull)
+
+  students    Student[]
+  attendances Attendance[]
+
+  @@unique([academicYearId, name])
+  @@index([schoolId])
+}
+
+model Student {
+  id          String    @id @default(cuid())
+  schoolId    String
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId     String
+  class       Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  code        String // mã học sinh
+  fullName    String
+  dob         DateTime?
+  gender      String? // NAM | NU
+  address     String?
+  parentName  String?
+  parentPhone String?
+  note        String?
+  status      String    @default("ACTIVE") // ACTIVE | TRANSFERRED | DROPPED
+  createdAt   DateTime  @default(now())
+
+  attendances    Attendance[]
+  conductRecords ConductRecord[]
+  evaluations    ConductEvaluation[]
+
+  @@unique([schoolId, code])
+  @@index([classId])
+}
+
+model Attendance {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  date      DateTime // lưu 00:00 UTC của ngày
+  status    String // PRESENT | EXCUSED | UNEXCUSED | LATE
+  note      String?
+
+  @@unique([studentId, date])
+  @@index([classId, date])
+}
+
+// Ghi nhận nề nếp hằng ngày: khen thưởng / vi phạm
+model ConductRecord {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date        DateTime
+  type        String // PRAISE | VIOLATION
+  content     String
+  points      Int      @default(0)
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([studentId])
+}
+
+// Đánh giá rèn luyện theo học kỳ (Thông tư 22: Tốt / Khá / Đạt / Chưa đạt)
+model ConductEvaluation {
+  id             String       @id @default(cuid())
+  studentId      String
+  student        Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  semester       Int // 1 | 2
+  rating         String // TOT | KHA | DAT | CHUA_DAT
+  comment        String?
+
+  @@unique([studentId, academicYearId, semester])
+}
