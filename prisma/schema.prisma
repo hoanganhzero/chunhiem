@@ -60,6 +60,8 @@ model User {
   children        Student[]       @relation("ParentAccount")
   announcements   Announcement[]
   messages        Message[]
+  emulations      EmulationRecord[] @relation("EmulationRecorder")
+  goals           Goal[]            @relation("GoalCreator")
 
   @@index([schoolId])
 }
@@ -93,6 +95,9 @@ model Class {
   students      Student[]
   attendances   Attendance[]
   announcements Announcement[]
+  groups        ClassGroup[]
+  criteria      EmulationCriterion[]
+  emulations    EmulationRecord[]
 
   @@unique([academicYearId, name])
   @@index([schoolId])
@@ -126,6 +131,12 @@ model Student {
   evaluations    ConductEvaluation[]
   grades         Grade[]
   messages       Message[]
+  // Thi đua: tổ và chức vụ cán sự lớp (TO_TRUONG | LOP_TRUONG | LOP_PHO | BI_THU)
+  groupId        String?
+  group          ClassGroup?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  classRole      String?
+  emulations     EmulationRecord[] @relation("EmulationTarget")
+  goals          Goal[]
 
   @@unique([schoolId, code])
   @@index([classId])
@@ -251,4 +262,70 @@ model ReportTemplate {
   fileName  String
   data      Bytes
   createdAt DateTime @default(now())
+}
+
+// ---------- Thi đua ----------
+
+model ClassGroup {
+  id       String    @id @default(cuid())
+  classId  String
+  class    Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  name     String // Tổ 1, Tổ 2…
+  order    Int       @default(0)
+  students Student[]
+
+  @@index([classId])
+}
+
+// Tiêu chí cộng / trừ điểm thi đua của lớp (GVCN chỉnh sửa được)
+model EmulationCriterion {
+  id       String            @id @default(cuid())
+  classId  String
+  class    Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
+  name     String
+  category String // HOC_TAP | NE_NEP | HOAT_DONG
+  points   Int // dương = cộng, âm = trừ
+  active   Boolean           @default(true)
+  order    Int               @default(0)
+  records  EmulationRecord[]
+
+  @@index([classId])
+}
+
+// Một lần ghi nhận thi đua. Cán sự (tổ trưởng, bí thư…) ghi → PENDING, GVCN duyệt → APPROVED.
+model EmulationRecord {
+  id           String              @id @default(cuid())
+  classId      String
+  class        Class               @relation(fields: [classId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student             @relation("EmulationTarget", fields: [studentId], references: [id], onDelete: Cascade)
+  criterionId  String?
+  criterion    EmulationCriterion? @relation(fields: [criterionId], references: [id], onDelete: SetNull)
+  label        String // tên tiêu chí tại thời điểm ghi (giữ lịch sử khi tiêu chí bị sửa)
+  category     String
+  points       Int
+  note         String?
+  date         DateTime
+  status       String              @default("APPROVED") // PENDING | APPROVED | REJECTED
+  recordedById String?
+  recordedBy   User?               @relation("EmulationRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime            @default(now())
+
+  @@index([classId, date])
+  @@index([studentId, date])
+}
+
+// Mục tiêu rèn luyện / học tập GVCN đặt cùng học sinh — phụ huynh theo dõi
+model Goal {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title       String
+  dueDate     DateTime?
+  status      String    @default("ACTIVE") // ACTIVE | DONE | MISSED
+  createdById String?
+  createdBy   User?     @relation("GoalCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+
+  @@index([studentId])
 }

@@ -1,7 +1,7 @@
 import {
   BarChart3, BookOpen, Building2, CalendarCheck, ClipboardList, FileSpreadsheet, GraduationCap, Home, KeyRound,
   LayoutDashboard, LibraryBig, Megaphone, MessageCircle, MoreHorizontal, School, Settings, ShieldAlert, Star,
-  Upload, UserCog, Users, type LucideProps,
+  Upload, UserCog, Users, Trophy, TrendingUp, PenLine, type LucideProps,
 } from "lucide-react";
 
 /** Danh mục biểu tượng dùng trong menu (tên dạng chuỗi để truyền từ server sang client). */
@@ -10,7 +10,7 @@ export const ICONS = {
   attendance: CalendarCheck, conduct: ShieldAlert, grades: BookOpen, evaluation: Star, messages: MessageCircle,
   reports: FileSpreadsheet, students: Users, accounts: KeyRound, announce: Megaphone, upload: Upload,
   teachers: UserCog, subjects: LibraryBig, settings: Settings, more: MoreHorizontal, learner: GraduationCap,
-  tasks: ClipboardList,
+  tasks: ClipboardList, trophy: Trophy, progress: TrendingUp, record: PenLine,
 } as const;
 export type IconName = keyof typeof ICONS;
 

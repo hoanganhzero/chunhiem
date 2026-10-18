@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle, Phone } from "lucide-react";
+import { MessageCircle, Phone, TrendingUp } from "lucide-react";
 import { requireFamilyAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { RATINGS, terms } from "@/lib/constants";
@@ -58,6 +58,7 @@ export default async function PortalStudentPage({ params }: { params: Promise<{ 
           <Link className="btn light sm" href={`/portal/${student.id}/messages`}>
             <MessageCircle size={16} /> {user.role === "PARENT" ? "Nhắn GVCN" : "Thông báo"}{unread && user.role === "PARENT" ? ` (${unread})` : ""}
           </Link>
+          <Link className="btn light sm" href={`/portal/${student.id}/progress`}><TrendingUp size={16} /> Thi đua & tiến bộ</Link>
           {teacher?.phone && (
             <a className="btn light sm" href={`tel:${teacher.phone}`}><Phone size={16} /> Gọi cô/thầy {teacher.name.split(" ").pop()}</a>
           )}

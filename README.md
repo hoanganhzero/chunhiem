@@ -17,6 +17,18 @@ Hỗ trợ **Trường THPT / THCS** và **Trung tâm GDNN-GDTX**: chọn loại
 | **Phụ huynh** | Chuyển nhanh giữa các con; vắng / khen / vi phạm / kết quả học tập kỳ hiện tại; điểm chi tiết; thông báo lớp & đơn vị; nhắn tin, gọi GVCN |
 | **Học sinh / Học viên** | Kết quả học tập của mình, thông báo |
 
+### Thi đua & đồng hành cùng phụ huynh
+- **Tổ & cán sự lớp**: GVCN chia tổ, cử tổ trưởng (ghi cho tổ mình), lớp trưởng / lớp phó / bí thư (ghi cho cả lớp).
+- **Tiêu chí thi đua** cộng / trừ điểm theo 3 nhóm Học tập – Nề nếp – Phong trào; có sẵn 14 tiêu chí, GVCN sửa / thêm / tắt.
+- **Cán sự ghi trên điện thoại** (chạm chọn bạn hoặc “Cả tổ” → chạm tiêu chí). Ghi nhận **chờ GVCN duyệt** mới tính điểm; GVCN ghi thì tính ngay.
+  Hệ thống chặn ghi cho bạn ngoài phạm vi và tự ghi cho mình.
+- **Bảng thi đua tuần**: xếp hạng tổ theo **điểm trung bình mỗi bạn** (công bằng khi sĩ số tổ khác nhau), gương tốt, **tiến bộ nhất**.
+  Học sinh / phụ huynh chỉ thấy điểm của mình, bảng tổ và gương tích cực — không công khai cuối bảng.
+- **Huy hiệu**: Ngôi sao tuần, Tiến bộ vượt bậc, Chuyên cần, Tích cực xây dựng bài, Việc tốt, Nề nếp tốt.
+- **Trang “Thi đua & tiến bộ”** cho phụ huynh / học sinh: ✅ Ưu điểm, 💡 Cần cố gắng, **Chuyển biến** (30 ngày gần nhất so với 30 ngày trước;
+  điểm môn HK I → HK II), biểu đồ điểm thi đua 8 tuần, **mục tiêu rèn luyện** GVCN đặt, nhật ký thi đua.
+- **Báo cáo định kỳ** gửi phụ huynh tự kèm điểm thi đua, huy hiệu, ưu điểm, điều cần cố gắng và mục tiêu đang thực hiện.
+
 ### Giao diện & ứng dụng điện thoại (PWA)
 - Font **Be Vietnam Pro**, bộ icon Lucide, **chế độ tối** tự động theo điện thoại / máy tính.
 - Máy tính: thanh menu bên trái theo vai trò. Điện thoại: **thanh điều hướng dưới đáy** như app + menu “Thêm” trượt lên.
@@ -76,7 +88,7 @@ Tài khoản mẫu:
 | `giaovu@demo.edu.vn` | `matkhau123` | Giáo vụ |
 | `gvcn@demo.edu.vn` | `matkhau123` | GVCN lớp 10A1 |
 | `giamdoc@gdtx.edu.vn` | `matkhau123` | Ban Giám đốc — Trung tâm GDNN-GDTX Demo |
-| `7910000001` | `12345678` (buộc đổi) | Học sinh 10A1 |
+| `7910000001` | `12345678` (buộc đổi) | Học sinh 10A1 — **tổ trưởng Tổ 1** (ghi thi đua) |
 | `0908100000` | `12345678` (buộc đổi) | Phụ huynh (có 2 con: 10A1 và 12A1) |
 
 > Đổi mật khẩu các tài khoản mẫu (hoặc không chạy seed) trước khi đưa lên môi trường thật.

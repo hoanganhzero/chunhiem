@@ -30,6 +30,8 @@ export async function buildNav(user: CurrentUser): Promise<Nav> {
       title: user.role === "PARENT" ? k.fullName : undefined,
       items: [
         { href: `/portal/${k.id}`, label: "Kết quả học tập", icon: "home", exact: true },
+        { href: `/portal/${k.id}/progress`, label: "Thi đua & tiến bộ", icon: "progress" },
+        ...(user.role === "STUDENT" && k.classRole ? [{ href: `/portal/${k.id}/record`, label: "Ghi thi đua", icon: "record" as const }] : []),
         { href: `/portal/${k.id}/messages`, label: user.role === "PARENT" ? "Liên lạc" : "Thông báo", icon: "messages",
           badge: user.role === "PARENT" ? k._count.messages : undefined },
       ],
@@ -39,6 +41,9 @@ export async function buildNav(user: CurrentUser): Promise<Nav> {
     const bottom: NavItem[] = first
       ? [
           { href: `/portal/${first.id}`, label: "Trang chủ", icon: "home", exact: true },
+          user.role === "STUDENT" && first.classRole
+            ? { href: `/portal/${first.id}/record`, label: "Ghi thi đua", icon: "record" }
+            : { href: `/portal/${first.id}/progress`, label: "Tiến bộ", icon: "progress" },
           { href: `/portal/${first.id}/messages`, label: user.role === "PARENT" ? "Liên lạc" : "Thông báo", icon: "messages",
             badge: user.role === "PARENT" ? unread : undefined },
           { href: "/account", label: "Tài khoản", icon: "accounts" },
@@ -96,6 +101,7 @@ export async function buildNav(user: CurrentUser): Promise<Nav> {
           { href: base, label: t.learner, icon: "students", exact: true },
           { href: `${base}/attendance`, label: "Điểm danh", icon: "attendance" },
           { href: `${base}/conduct`, label: "Nề nếp", icon: "conduct" },
+          { href: `${base}/emulation`, label: "Thi đua", icon: "trophy" },
           { href: `${base}/grades`, label: "Sổ điểm", icon: "grades" },
           { href: `${base}/messages`, label: "Liên lạc", icon: "messages", badge: unreadOf(c.id) },
           { href: `${base}/reports`, label: "Báo cáo", icon: "reports" },

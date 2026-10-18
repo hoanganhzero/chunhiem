@@ -96,3 +96,39 @@ export const DEFAULT_SUBJECTS: [code: string, name: string, type: "SCORE" | "COM
   ["HDTN", "HĐ trải nghiệm, hướng nghiệp", "COMMENT"],
   ["GDDP", "Nội dung GD địa phương", "COMMENT"],
 ];
+
+// ---------- Thi đua ----------
+
+/** Cán sự lớp. recordScope: phạm vi được ghi thi đua. */
+export const CLASS_ROLES = {
+  LOP_TRUONG: { label: "Lớp trưởng", scope: "class" },
+  BI_THU: { label: "Bí thư chi đoàn", scope: "class" },
+  LOP_PHO: { label: "Lớp phó", scope: "class" },
+  TO_TRUONG: { label: "Tổ trưởng", scope: "group" },
+} as const;
+export type ClassRole = keyof typeof CLASS_ROLES;
+
+export const EMU_CATEGORIES = {
+  HOC_TAP: "Học tập",
+  NE_NEP: "Nề nếp",
+  HOAT_DONG: "Phong trào",
+} as const;
+export type EmuCategory = keyof typeof EMU_CATEGORIES;
+
+/** Tiêu chí thi đua mặc định khi lớp bắt đầu dùng — GVCN sửa / thêm / tắt được. */
+export const DEFAULT_CRITERIA: [name: string, category: EmuCategory, points: number][] = [
+  ["Phát biểu xây dựng bài", "HOC_TAP", 2],
+  ["Điểm kiểm tra 9 – 10", "HOC_TAP", 3],
+  ["Giúp bạn cùng tiến bộ", "HOC_TAP", 2],
+  ["Không thuộc bài / không làm bài tập", "HOC_TAP", -3],
+  ["Điểm kiểm tra dưới 5", "HOC_TAP", -2],
+  ["Nói chuyện riêng, mất trật tự", "HOC_TAP", -2],
+  ["Trực nhật tốt", "NE_NEP", 1],
+  ["Đi học muộn", "NE_NEP", -2],
+  ["Không đúng đồng phục, trang phục", "NE_NEP", -2],
+  ["Dùng điện thoại sai quy định", "NE_NEP", -3],
+  ["Vệ sinh khu vực chưa sạch", "NE_NEP", -1],
+  ["Tham gia phong trào, văn nghệ, TDTT", "HOAT_DONG", 3],
+  ["Việc tốt (giúp đỡ người khác, trả của rơi…)", "HOAT_DONG", 5],
+  ["Đạt giải thi trường / cấp trên", "HOAT_DONG", 5],
+];

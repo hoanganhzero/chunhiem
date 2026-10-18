@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireClassAccess, requireFamilyAccess, requireStudentAccess } from "@/lib/auth";
 import { ATTENDANCE } from "@/lib/constants";
 import { fmtDate, str } from "@/lib/utils";
+import { buildProgress, classBoards, progressSummary } from "@/lib/progress";
 import type { ActionResult } from "./types";
 
 export async function postAnnouncement(_: ActionResult, form: FormData): Promise<ActionResult> {
@@ -64,6 +65,11 @@ export async function sendPeriodicReports(_: ActionResult, form: FormData): Prom
     },
   });
   const extra = str(form, "extra");
+  // Phần thi đua, ưu điểm, hạn chế, mục tiêu cho từng em
+  const boards = await classBoards(cls.id);
+  const summaries = new Map(
+    await Promise.all(students.map(async (s) => [s.id, progressSummary(await buildProgress(s.id, boards))] as const)),
+  );
   const data = students.map((s) => {
     const lines = [`Báo cáo tình hình học sinh ${s.fullName} từ ${fmtDate(from)} đến ${fmtDate(to)}:`];
     if (!s.attendances.length) lines.push("• Chuyên cần: đi học đầy đủ, đúng giờ.");
@@ -77,6 +83,8 @@ export async function sendPeriodicReports(_: ActionResult, form: FormData): Prom
     if (praise.length) lines.push(`• Khen thưởng: ${praise.map((c) => `${c.content} (${fmtDate(c.date)})`).join("; ")}`);
     if (viol.length) lines.push(`• Cần nhắc nhở: ${viol.map((c) => `${c.content} (${fmtDate(c.date)})`).join("; ")}`);
     if (!praise.length && !viol.length) lines.push("• Nề nếp: thực hiện tốt nội quy.");
+    const progress = summaries.get(s.id);
+    if (progress?.length) lines.push("", "Thi đua & tiến bộ:", ...progress);
     if (extra) lines.push("", extra);
     return { studentId: s.id, senderId: user.id, fromFamily: false, content: lines.join("\n") };
   });

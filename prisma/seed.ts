@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { DEFAULT_SUBJECTS } from "../src/lib/constants";
+import { DEFAULT_CRITERIA, DEFAULT_SUBJECTS } from "../src/lib/constants";
 
 const db = new PrismaClient();
 const DEFAULT_PASSWORD = "12345678";
@@ -105,6 +105,53 @@ async function main() {
       })),
     });
   }
+
+  // Thi đua mẫu lớp 10A1: 2 tổ, cán sự, tiêu chí, 8 tuần ghi nhận
+  const g1 = await db.classGroup.create({ data: { classId: cls.id, name: "Tổ 1", order: 0 } });
+  const g2 = await db.classGroup.create({ data: { classId: cls.id, name: "Tổ 2", order: 1 } });
+  const members = await db.student.findMany({ where: { classId: cls.id }, orderBy: { code: "asc" } });
+  for (const [i, st] of members.entries()) {
+    await db.student.update({
+      where: { id: st.id },
+      data: { groupId: i % 2 ? g2.id : g1.id, classRole: i === 0 ? "TO_TRUONG" : i === 1 ? "LOP_TRUONG" : i === 3 ? "BI_THU" : i === 2 ? "TO_TRUONG" : null },
+    });
+  }
+  await db.emulationCriterion.createMany({
+    data: DEFAULT_CRITERIA.map(([name, category, points], order) => ({ classId: cls.id, name, category, points, order })),
+  });
+  const crit = await db.emulationCriterion.findMany({ where: { classId: cls.id } });
+  const byName = (n: string) => crit.find((c) => c.name.startsWith(n))!;
+  const rec = (st: (typeof members)[number], c: (typeof crit)[number], date: Date, status = "APPROVED", by: string | null = gv.id) =>
+    ({ classId: cls.id, studentId: st.id, criterionId: c.id, label: c.name, category: c.category, points: c.points, date, status, recordedById: by });
+  const day = (ago: number) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ago));
+  const data = [];
+  for (let ago = 1; ago <= 56; ago++) {
+    if (day(ago).getUTCDay() === 0) continue;
+    for (const [i, st] of members.entries()) {
+      const k = (ago * 7 + i * 3) % 11;
+      if (i === 0) {
+        // Trần Minh Anh: tháng trước hay đi muộn, không thuộc bài; tháng này tiến bộ rõ
+        if (ago > 30 && k < 3) data.push(rec(st, byName(k === 0 ? "Đi học muộn" : "Không thuộc bài"), day(ago)));
+        if (ago <= 30 && k < 4) data.push(rec(st, byName(k === 3 ? "Giúp bạn" : "Phát biểu"), day(ago)));
+        continue;
+      }
+      if (k === 0) data.push(rec(st, byName("Phát biểu"), day(ago)));
+      if (k === 4 && i % 3 === 0) data.push(rec(st, byName("Điểm kiểm tra 9"), day(ago)));
+      if (k === 7 && i % 2 === 1) data.push(rec(st, byName("Nói chuyện riêng"), day(ago)));
+      if (k === 9 && i === 5) data.push(rec(st, byName("Không đúng đồng phục"), day(ago)));
+      if (ago % 9 === 0 && i === 6) data.push(rec(st, byName("Tham gia phong trào"), day(ago)));
+    }
+  }
+  const leaderUser = members[0].userId;
+  data.push(rec(members[2], byName("Phát biểu"), day(0), "PENDING", leaderUser));
+  data.push(rec(members[4], byName("Trực nhật tốt"), day(0), "PENDING", leaderUser));
+  await db.emulationRecord.createMany({ data });
+  await db.goal.createMany({
+    data: [
+      { studentId: members[0].id, title: "Không đi học muộn trong tháng này", createdById: gv.id, dueDate: day(-12) },
+      { studentId: members[0].id, title: "Thuộc bài, làm đủ bài tập trước khi đến lớp", createdById: gv.id, status: "DONE" },
+    ],
+  });
 
   // Trung tâm GDNN-GDTX mẫu (giao diện dùng "Học viên", "Ban Giám đốc")
   const center = await db.school.create({

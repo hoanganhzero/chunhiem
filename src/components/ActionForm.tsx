@@ -33,7 +33,8 @@ export function ActionForm({ action, children, className, resetOnSuccess, confir
       onSubmit={(e) => {
         e.preventDefault();
         if (pending || (confirm && !window.confirm(confirm))) return;
-        const data = new FormData(e.currentTarget);
+        // Gồm cả name/value của nút được bấm (vd. Duyệt / Từ chối)
+        const data = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
         startTransition(() => formAction(data));
       }}
     >

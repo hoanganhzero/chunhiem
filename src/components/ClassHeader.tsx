@@ -9,6 +9,7 @@ const TABS = [
   ["accounts", "/accounts", "accounts"],
   ["attendance", "/attendance", "attendance"],
   ["conduct", "/conduct", "conduct"],
+  ["emulation", "/emulation", "trophy"],
   ["grades", "/grades", "grades"],
   ["evaluation", "/evaluation", "evaluation"],
   ["messages", "/messages", "messages"],
@@ -26,7 +27,7 @@ export async function ClassHeader({ cls, active, actions }: Props) {
   const t = terms(school?.type);
   const labels: Record<string, string> = {
     students: t.learner, accounts: "Tài khoản", attendance: "Điểm danh", conduct: "Nề nếp",
-    grades: "Sổ điểm", evaluation: "Rèn luyện", messages: "Liên lạc", reports: "Báo cáo",
+    emulation: "Thi đua", grades: "Sổ điểm", evaluation: "Rèn luyện", messages: "Liên lạc", reports: "Báo cáo",
   };
   return (
     <>
