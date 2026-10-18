@@ -1,6 +1,7 @@
 import { BookMarked } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { AUTH_SECRET_ERROR, authSecretReady } from "@/lib/session";
 import { PasswordInput } from "@/components/PasswordInput";
 import { setupAdmin } from "@/actions/setup";
 
@@ -59,6 +60,7 @@ export default async function SetupPage() {
               <p className="muted" style={{ marginTop: 0, marginBottom: 22 }}>
                 Tạo tài khoản Quản trị hệ thống đầu tiên. Trang này tự khoá sau khi tạo xong.
               </p>
+{!authSecretReady() && <div className="alert error" style={{ marginBottom: 16 }}>{AUTH_SECRET_ERROR}</div>}
               <ActionForm action={setupAdmin}>
                 {process.env.SETUP_CODE && (
                   <div className="field">

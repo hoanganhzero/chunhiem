@@ -4,12 +4,13 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { SESSION_COOKIE, cookieOptions, signSession } from "@/lib/session";
+import { AUTH_SECRET_ERROR, SESSION_COOKIE, authSecretReady, cookieOptions, signSession } from "@/lib/session";
 import { requireUser } from "@/lib/auth";
 import { str } from "@/lib/utils";
 import type { ActionResult } from "./types";
 
 export async function login(_: ActionResult, form: FormData): Promise<ActionResult> {
+  if (!authSecretReady()) return { error: AUTH_SECRET_ERROR };
   const username = str(form, "username").toLowerCase();
   const password = str(form, "password");
   const user = await db.user.findUnique({ where: { username }, include: { school: true } });

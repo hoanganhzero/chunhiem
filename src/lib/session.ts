@@ -6,10 +6,17 @@ const MAX_AGE = 60 * 60 * 24 * 7; // 7 ngày
 /** mcp = must change password: buộc đổi mật khẩu trước khi dùng hệ thống */
 export type SessionPayload = { userId: string; mcp?: boolean };
 
+export const AUTH_SECRET_ERROR =
+  "Máy chủ chưa cấu hình AUTH_SECRET (chuỗi ngẫu nhiên ≥ 32 ký tự). Quản trị: thêm biến này trên Vercel → Settings → Environment Variables rồi Redeploy.";
+
+/** Khoá ký phiên đăng nhập đã cấu hình hợp lệ chưa */
+export function authSecretReady() {
+  return (process.env.AUTH_SECRET?.trim().length ?? 0) >= 32;
+}
+
 function key() {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret || secret.length < 32) throw new Error("AUTH_SECRET phải có ít nhất 32 ký tự");
-  return new TextEncoder().encode(secret);
+  if (!authSecretReady()) throw new Error(AUTH_SECRET_ERROR);
+  return new TextEncoder().encode(process.env.AUTH_SECRET!.trim());
 }
 
 export async function signSession(payload: SessionPayload) {

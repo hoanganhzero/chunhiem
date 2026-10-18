@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { SESSION_COOKIE, cookieOptions, signSession } from "@/lib/session";
+import { AUTH_SECRET_ERROR, SESSION_COOKIE, authSecretReady, cookieOptions, signSession } from "@/lib/session";
 import { str } from "@/lib/utils";
 import type { ActionResult } from "./types";
 
@@ -13,6 +13,8 @@ import type { ActionResult } from "./types";
  * Nếu đặt biến môi trường SETUP_CODE thì phải nhập đúng mã này.
  */
 export async function setupAdmin(_: ActionResult, form: FormData): Promise<ActionResult> {
+  // Kiểm tra trước khi ghi CSDL, tránh tạo tài khoản xong mới lỗi ở bước đăng nhập
+  if (!authSecretReady()) return { error: AUTH_SECRET_ERROR };
   const code = process.env.SETUP_CODE;
   if (code && str(form, "code") !== code) return { error: "Mã khởi tạo không đúng" };
   const username = str(form, "username").toLowerCase();

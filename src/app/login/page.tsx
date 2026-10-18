@@ -1,5 +1,6 @@
 import { BookMarked, CalendarCheck, FileSpreadsheet, MessageCircle, Smartphone } from "lucide-react";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
+import { AUTH_SECRET_ERROR, authSecretReady } from "@/lib/session";
 import { PasswordInput } from "@/components/PasswordInput";
 import { login } from "@/actions/auth";
 import { redirect } from "next/navigation";
@@ -39,6 +40,7 @@ export default async function LoginPage() {
         <div className="inner">
           <h1>Đăng nhập</h1>
           <p className="muted" style={{ marginTop: 0, marginBottom: 22 }}>Dùng tài khoản do nhà trường cung cấp</p>
+{!authSecretReady() && <div className="alert error" style={{ marginBottom: 16 }}>{AUTH_SECRET_ERROR}</div>}
           <ActionForm action={login}>
             <div className="field">
               <label htmlFor="username">Tên đăng nhập</label>
