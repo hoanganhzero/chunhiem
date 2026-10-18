@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { PasswordInput } from "@/components/PasswordInput";
 import { setupAdmin } from "@/actions/setup";
-import { db } from "@/lib/db";
 
 export const metadata = { title: "Khởi tạo hệ thống" };
 export const dynamic = "force-dynamic";
@@ -11,13 +10,24 @@ export const dynamic = "force-dynamic";
 // Chỉ báo tên biến có mặt hay không — không bao giờ hiển thị giá trị
 const DB_VARS = ["DATABASE_URL", "POSTGRES_PRISMA_URL", "DATABASE_URL_UNPOOLED", "POSTGRES_URL_NON_POOLING", "DIRECT_URL"];
 
+/** Tóm tắt lỗi để chẩn đoán, che mật khẩu trong chuỗi kết nối */
+function describeError(e: unknown) {
+  const err = e as { name?: string; code?: string; errorCode?: string; message?: string };
+  const lines = String(err?.message ?? e).split("\n").map((l) => l.trim()).filter(Boolean);
+  const msg = lines.filter((l) => !l.startsWith("at ") && !l.startsWith("→")).slice(0, 4).join(" · ");
+  const code = err?.code || err?.errorCode;
+  return `${err?.name ?? "Error"}${code ? ` [${code}]` : ""}: ${msg}`.replace(/\/\/[^:/@\s]+:[^@\s]+@/g, "//***:***@").slice(0, 600);
+}
+
 export default async function SetupPage() {
   let users: number | null = null;
   let dbError = "";
   try {
+    // Nạp động để bắt cả lỗi khởi tạo Prisma (thiếu engine, URL sai…), không chỉ lỗi truy vấn
+    const { db } = await import("@/lib/db");
     users = await db.user.count();
   } catch (e) {
-    dbError = e instanceof Error ? e.message.split("\n").filter(Boolean).slice(-1)[0] ?? "" : String(e);
+    dbError = describeError(e);
   }
   if (users) redirect("/login");
 
