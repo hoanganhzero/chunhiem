@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
-import { useFormStatus } from "react-dom";
+import { createContext, startTransition, useActionState, useContext, useEffect, useRef } from "react";
 import type { ActionResult } from "@/actions/types";
 
 type Props = {
@@ -12,8 +11,15 @@ type Props = {
   confirm?: string;
 };
 
+const PendingContext = createContext(false);
+
+/**
+ * Form gọi server action và hiển thị kết quả.
+ * Tự gửi FormData (thay vì để React tự xử lý) để form KHÔNG bị xoá trắng sau khi gửi —
+ * tránh mất dữ liệu đã nhập (vd. bảng điểm) khi máy chủ báo lỗi.
+ */
 export function ActionForm({ action, children, className, resetOnSuccess, confirm }: Props) {
-  const [state, formAction] = useActionState(action, {});
+  const [state, formAction, pending] = useActionState(action, {});
   const ref = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -23,21 +29,23 @@ export function ActionForm({ action, children, className, resetOnSuccess, confir
   return (
     <form
       ref={ref}
-      action={formAction}
       className={className}
       onSubmit={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault();
+        e.preventDefault();
+        if (pending || (confirm && !window.confirm(confirm))) return;
+        const data = new FormData(e.currentTarget);
+        startTransition(() => formAction(data));
       }}
     >
       {state.error && <div className="alert error" style={{ width: "100%" }}>{state.error}</div>}
       {state.ok && <div className="alert success" style={{ width: "100%" }}>{state.ok}</div>}
-      {children}
+      <PendingContext.Provider value={pending}>{children}</PendingContext.Provider>
     </form>
   );
 }
 
 export function SubmitButton({ children, className }: { children: React.ReactNode; className?: string }) {
-  const { pending } = useFormStatus();
+  const pending = useContext(PendingContext);
   return (
     <button type="submit" disabled={pending} className={className}>
       {pending ? "Đang xử lý…" : children}

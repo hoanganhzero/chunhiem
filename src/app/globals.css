@@ -117,3 +117,28 @@ button:disabled { opacity: .6; cursor: default; }
   .att-options .full { display: none; }
   .att-options .short { display: inline; }
 }
+.alert.warn { background: var(--warn-soft); color: var(--warn); }
+.alert.info { background: var(--primary-soft); color: var(--primary); }
+.sidebar .count { float: right; background: #e5484d; color: #fff; border-radius: 999px; font-size: .72rem; padding: 0 7px; line-height: 1.6; }
+.grade-input { width: 52px; text-align: center; padding: 6px 4px; }
+.grade-table td, .grade-table th { padding: 6px 4px; text-align: center; }
+.grade-table td.name, .grade-table th.name { text-align: left; white-space: nowrap; }
+.grade-table .avg { font-weight: 700; }
+.low { color: var(--danger); }
+.thread { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.bubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; }
+.bubble.me { align-self: flex-end; background: var(--primary-soft); }
+.bubble.them { align-self: flex-start; background: #f0f2f6; }
+.bubble .meta { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+.token-table code { background: #f0f2f6; padding: 1px 6px; border-radius: 4px; }
+.slips { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.slip { border: 1px dashed #999; border-radius: 8px; padding: 12px 14px; break-inside: avoid; background: #fff; }
+.slip h3 { margin: 0 0 6px; font-size: 1rem; }
+.slip table td { padding: 3px 4px; border: 0; }
+@media print {
+  .sidebar, .no-print, .tabs, .page-head .btn { display: none !important; }
+  .main { padding: 0; }
+  body { background: #fff; }
+  .card { border: 0; padding: 0; }
+  .slips { grid-template-columns: 1fr 1fr; }
+}

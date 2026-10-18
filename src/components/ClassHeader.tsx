@@ -1,16 +1,22 @@
 import Link from "next/link";
 
-type Props = {
-  cls: { id: string; name: string; academicYear: { name: string }; homeroomTeacher: { name: string } | null };
-  active: "students" | "attendance" | "conduct" | "evaluation";
-};
-
 const TABS = [
-  ["students", "Danh sách học sinh", ""],
+  ["students", "Học sinh", ""],
+  ["accounts", "Tài khoản", "/accounts"],
   ["attendance", "Điểm danh", "/attendance"],
   ["conduct", "Nề nếp", "/conduct"],
-  ["evaluation", "Đánh giá rèn luyện", "/evaluation"],
+  ["grades", "Sổ điểm", "/grades"],
+  ["evaluation", "Rèn luyện", "/evaluation"],
+  ["messages", "Liên lạc", "/messages"],
+  ["reports", "Báo cáo", "/reports"],
 ] as const;
+
+type Props = {
+  cls: { id: string; name: string; academicYear: { name: string }; homeroomTeacher: { name: string } | null };
+  active: (typeof TABS)[number][0];
+};
+
+
 
 export function ClassHeader({ cls, active }: Props) {
   return (

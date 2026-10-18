@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireSchoolAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { assignHomeroom, createAcademicYear, createClass, setCurrentYear } from "@/actions/school";
+import { assignHomeroom, createAcademicYear, createClass, setCurrentYear, updateSemester2Start } from "@/actions/school";
+import { isoDay } from "@/lib/utils";
 
 export default async function ClassesAdminPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
   const { schoolId } = await requireSchoolAdmin();
@@ -39,6 +40,17 @@ export default async function ClassesAdminPage({ searchParams }: { searchParams:
             </form>
           )}
         </div>
+        {year && (
+          <ActionForm action={updateSemester2Start} className="inline">
+            <input type="hidden" name="id" value={year.id} />
+            <div className="field">
+              <label>Ngày bắt đầu học kỳ II ({year.name})</label>
+              <input type="date" name="semester2Start" defaultValue={year.semester2Start ? isoDay(year.semester2Start) : ""} required />
+            </div>
+            <SubmitButton className="secondary">Lưu</SubmitButton>
+          </ActionForm>
+        )}
+        <div style={{ height: 12 }} />
         <ActionForm action={createAcademicYear} className="inline" resetOnSuccess>
           <div className="field"><label>Thêm năm học</label><input name="name" placeholder="2026-2027" required /></div>
           <SubmitButton className="secondary">Thêm</SubmitButton>

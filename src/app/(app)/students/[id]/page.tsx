@@ -1,20 +1,18 @@
 import Link from "next/link";
 import { requireStudentAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ATTENDANCE, RATINGS } from "@/lib/constants";
-import { fmtDate } from "@/lib/utils";
 import { StudentFields } from "@/components/StudentFields";
+import { StudentRecord } from "@/components/StudentRecord";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { updateStudent } from "@/actions/classroom";
+import { resetFamilyPassword, updateStudent } from "@/actions/classroom";
 
 export default async function StudentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { cls, student } = await requireStudentAccess(id);
-  const [absences, records, evaluations] = await Promise.all([
-    db.attendance.findMany({ where: { studentId: id, status: { not: "PRESENT" } }, orderBy: { date: "desc" }, take: 50 }),
-    db.conductRecord.findMany({ where: { studentId: id }, orderBy: { date: "desc" }, take: 50 }),
-    db.conductEvaluation.findMany({ where: { studentId: id }, include: { academicYear: true }, orderBy: [{ academicYear: { name: "desc" } }, { semester: "desc" }] }),
-  ]);
+  const accounts = await db.student.findUniqueOrThrow({
+    where: { id },
+    select: { user: { select: { username: true, mustChangePassword: true } }, parentUser: { select: { username: true, mustChangePassword: true } } },
+  });
 
   return (
     <>
@@ -24,6 +22,7 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
           <h1>{student.fullName}</h1>
           <div className="muted">Mã HS: {student.code}</div>
         </div>
+        <Link className="btn secondary" href={`/classes/${cls.id}/messages/${student.id}`}>💬 Liên lạc phụ huynh</Link>
       </div>
 
       <div className="card">
@@ -35,53 +34,31 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
         </ActionForm>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
-        <div className="card">
-          <h2>Chuyên cần ({absences.length})</h2>
-          <table>
-            <tbody>
-              {absences.map((a) => (
-                <tr key={a.id}>
-                  <td>{fmtDate(a.date)}</td>
-                  <td><span className={`badge ${a.status === "UNEXCUSED" ? "danger" : "warn"}`}>{ATTENDANCE[a.status as keyof typeof ATTENDANCE]}</span></td>
-                  <td className="small muted">{a.note}</td>
-                </tr>
-              ))}
-              {absences.length === 0 && <tr><td className="muted">Đi học đầy đủ.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-        <div className="card">
-          <h2>Nề nếp ({records.length})</h2>
-          <table>
-            <tbody>
-              {records.map((r) => (
-                <tr key={r.id}>
-                  <td>{fmtDate(r.date)}</td>
-                  <td><span className={`badge ${r.type === "PRAISE" ? "ok" : "danger"}`}>{r.type === "PRAISE" ? "Khen" : "Vi phạm"}</span></td>
-                  <td>{r.content}</td>
-                </tr>
-              ))}
-              {records.length === 0 && <tr><td className="muted">Chưa có ghi nhận.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-        <div className="card">
-          <h2>Đánh giá rèn luyện</h2>
-          <table>
-            <tbody>
-              {evaluations.map((e) => (
-                <tr key={e.id}>
-                  <td>{e.academicYear.name} · HK{e.semester}</td>
-                  <td><strong>{RATINGS[e.rating as keyof typeof RATINGS]}</strong></td>
-                  <td className="small muted">{e.comment}</td>
-                </tr>
-              ))}
-              {evaluations.length === 0 && <tr><td className="muted">Chưa có đánh giá.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+      <div className="card">
+        <h2>Tài khoản</h2>
+        <table>
+          <tbody>
+            {([["student", "Học sinh", accounts.user], ["parent", "Phụ huynh", accounts.parentUser]] as const).map(([which, label, u]) => (
+              <tr key={which}>
+                <td>{label}</td>
+                <td>{u ? <code>{u.username}</code> : <span className="muted">Chưa có — vào tab Tài khoản của lớp để tạo</span>}</td>
+                <td>{u && (u.mustChangePassword ? <span className="badge warn">Chưa đổi MK</span> : <span className="badge ok">Đã kích hoạt</span>)}</td>
+                <td>
+                  {u && (
+                    <ActionForm action={resetFamilyPassword} confirm="Đặt lại mật khẩu về mặc định?">
+                      <input type="hidden" name="studentId" value={student.id} />
+                      <input type="hidden" name="which" value={which} />
+                      <SubmitButton className="secondary">Đặt lại mật khẩu</SubmitButton>
+                    </ActionForm>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+
+      <StudentRecord studentId={student.id} academicYearId={cls.academicYearId} schoolId={cls.schoolId} />
     </>
   );
 }

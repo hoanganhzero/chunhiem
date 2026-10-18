@@ -9,8 +9,8 @@ export default function LoginPage() {
         <p className="muted" style={{ marginTop: 0 }}>Đăng nhập để tiếp tục</p>
         <ActionForm action={login}>
           <div className="field">
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" required autoComplete="username" />
+            <label htmlFor="username">Tên đăng nhập</label>
+            <input id="username" name="username" required autoComplete="username" autoCapitalize="none" />
           </div>
           <div className="field">
             <label htmlFor="password">Mật khẩu</label>
@@ -18,6 +18,10 @@ export default function LoginPage() {
           </div>
           <SubmitButton>Đăng nhập</SubmitButton>
         </ActionForm>
+        <p className="small muted" style={{ marginBottom: 0 }}>
+          Giáo viên: email · Học sinh: mã học sinh · Phụ huynh: số điện thoại.<br />
+          Lần đầu đăng nhập dùng mật khẩu mặc định do nhà trường cung cấp.
+        </p>
       </div>
     </div>
   );

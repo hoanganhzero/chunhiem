@@ -3,7 +3,8 @@ import { SignJWT, jwtVerify } from "jose";
 export const SESSION_COOKIE = "session";
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 ngày
 
-export type SessionPayload = { userId: string };
+/** mcp = must change password: buộc đổi mật khẩu trước khi dùng hệ thống */
+export type SessionPayload = { userId: string; mcp?: boolean };
 
 function key() {
   const secret = process.env.AUTH_SECRET;
@@ -23,7 +24,7 @@ export async function verifySession(token: string | undefined): Promise<SessionP
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, key());
-    return typeof payload.userId === "string" ? { userId: payload.userId } : null;
+    return typeof payload.userId === "string" ? { userId: payload.userId, mcp: payload.mcp === true } : null;
   } catch {
     return null;
   }

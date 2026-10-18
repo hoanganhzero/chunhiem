@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { optStr, str } from "@/lib/utils";
+import { DEFAULT_SUBJECTS } from "@/lib/constants";
 import type { ActionResult } from "./types";
 
 /** SUPER_ADMIN: tạo trường mới kèm tài khoản quản trị trường đầu tiên. */
@@ -19,15 +20,17 @@ export async function createSchool(_: ActionResult, form: FormData): Promise<Act
   if (!name || !adminEmail || !adminName) return { error: "Vui lòng nhập đủ thông tin" };
   if (adminPassword.length < 8) return { error: "Mật khẩu tối thiểu 8 ký tự" };
   if (await db.school.findUnique({ where: { code } })) return { error: "Mã trường đã tồn tại" };
-  if (await db.user.findUnique({ where: { email: adminEmail } })) return { error: "Email đã được sử dụng" };
+  if (await db.user.findUnique({ where: { username: adminEmail } })) return { error: "Email đã được sử dụng" };
 
   await db.school.create({
     data: {
       code,
       name,
       address: optStr(form, "address"),
+      subjects: { create: DEFAULT_SUBJECTS.map(([code, name, type], order) => ({ code, name, type, order })) },
       users: {
         create: {
+          username: adminEmail,
           email: adminEmail,
           name: adminName,
           role: "SCHOOL_ADMIN",

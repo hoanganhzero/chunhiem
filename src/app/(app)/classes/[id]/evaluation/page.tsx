@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireClassAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { RATINGS } from "@/lib/constants";
+import { getPeriod } from "@/lib/period";
+import { vnNameCompare } from "@/lib/utils";
 import { ClassHeader } from "@/components/ClassHeader";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { saveEvaluations } from "@/actions/classroom";
@@ -12,15 +14,17 @@ export default async function EvaluationPage({
   const { id } = await params;
   const { cls } = await requireClassAccess(id);
   const semester = (await searchParams).hk === "2" ? 2 : 1;
+  const period = getPeriod(cls.academicYear, `HK${semester}`);
+  const range = { gte: period.from, lt: period.to };
   const students = await db.student.findMany({
     where: { classId: cls.id, status: "ACTIVE" },
-    orderBy: { fullName: "asc" },
     include: {
       evaluations: { where: { academicYearId: cls.academicYearId, semester } },
-      attendances: { where: { status: { in: ["EXCUSED", "UNEXCUSED"] } }, select: { status: true } },
-      conductRecords: { select: { type: true, points: true } },
+      attendances: { where: { date: range, status: { in: ["EXCUSED", "UNEXCUSED"] } }, select: { status: true } },
+      conductRecords: { where: { date: range }, select: { type: true, points: true } },
     },
   });
+  students.sort((a, b) => vnNameCompare(a.fullName, b.fullName));
   const dist = Object.keys(RATINGS).map(
     (k) => [k, students.filter((s) => s.evaluations[0]?.rating === k).length] as const,
   );
@@ -42,7 +46,7 @@ export default async function EvaluationPage({
           <input type="hidden" name="semester" value={semester} />
           <div className="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Họ tên</th><th>Vắng (P/KP)</th><th>Khen / Vi phạm</th><th>Xếp loại rèn luyện</th><th>Nhận xét</th></tr></thead>
+              <thead><tr><th>#</th><th>Họ tên</th><th>Vắng trong HK (P/KP)</th><th>Khen / Vi phạm trong HK</th><th>Xếp loại rèn luyện</th><th>Nhận xét</th></tr></thead>
               <tbody>
                 {students.map((s, i) => {
                   const ev = s.evaluations[0];

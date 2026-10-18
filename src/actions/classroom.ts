@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireClassAccess, requireStudentAccess } from "@/lib/auth";
 import { ATTENDANCE, CONDUCT_TYPES, GENDERS, RATINGS, STUDENT_STATUS } from "@/lib/constants";
-import { optStr, parseCsv, parseDob, str, toDay } from "@/lib/utils";
+import { optStr, parseDob, str, toDay } from "@/lib/utils";
+import { provisionStudents, resetToDefault, summarize, type ProvisionItem } from "@/lib/accounts";
+import { STUDENT_COLUMNS, readTable, toStudentInput } from "@/lib/excel";
 import type { ActionResult } from "./types";
 
 function studentFields(form: FormData) {
@@ -14,8 +16,10 @@ function studentFields(form: FormData) {
     fullName: str(form, "fullName"),
     dob: parseDob(str(form, "dob")),
     gender: gender in GENDERS ? gender : null,
+    ethnicity: optStr(form, "ethnicity"),
     address: optStr(form, "address"),
     parentName: optStr(form, "parentName"),
+    parentRelation: optStr(form, "parentRelation"),
     parentPhone: optStr(form, "parentPhone"),
     note: optStr(form, "note"),
     ...(status in STUDENT_STATUS ? { status } : {}),
@@ -24,14 +28,15 @@ function studentFields(form: FormData) {
 
 export async function createStudent(_: ActionResult, form: FormData): Promise<ActionResult> {
   const { cls } = await requireClassAccess(str(form, "classId"));
-  const code = str(form, "code").toUpperCase();
+  const code = str(form, "code").replace(/\s/g, "").toUpperCase();
   const data = studentFields(form);
   if (!code || !data.fullName) return { error: "Vui lòng nhập mã và họ tên học sinh" };
   if (await db.student.findUnique({ where: { schoolId_code: { schoolId: cls.schoolId, code } } }))
     return { error: `Mã học sinh ${code} đã tồn tại trong trường` };
-  await db.student.create({ data: { ...data, code, schoolId: cls.schoolId, classId: cls.id } });
+  const res = await provisionStudents({ schoolId: cls.schoolId, items: [{ row: 0, classId: cls.id, data: { ...data, code } }] });
   revalidatePath(`/classes/${cls.id}`);
-  return { ok: `Đã thêm ${data.fullName}` };
+  if (res.errors.length) return { error: res.errors.join("; ") };
+  return { ok: `Đã thêm ${data.fullName}. ${summarize(res)}${res.warnings.length ? " " + res.warnings.join("; ") : ""}` };
 }
 
 export async function updateStudent(_: ActionResult, form: FormData): Promise<ActionResult> {
@@ -44,46 +49,55 @@ export async function updateStudent(_: ActionResult, form: FormData): Promise<Ac
   return { ok: "Đã lưu thông tin" };
 }
 
-/**
- * Nhập danh sách từ CSV. Cột: Mã HS, Họ tên, Ngày sinh (dd/mm/yyyy), Giới tính (Nam/Nữ),
- * Địa chỉ, Họ tên phụ huynh, SĐT phụ huynh. Dòng đầu là tiêu đề.
- */
+/** Nhập danh sách lớp từ tệp Excel (.xlsx) theo mẫu chuẩn hoặc CSV; tạo luôn tài khoản HS + PH. */
 export async function importStudents(_: ActionResult, form: FormData): Promise<ActionResult> {
   const { cls } = await requireClassAccess(str(form, "classId"));
   const file = form.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "Chưa chọn tệp CSV" };
-  if (file.size > 2_000_000) return { error: "Tệp quá lớn (tối đa 2MB)" };
-  const rows = parseCsv(await file.text()).slice(1);
-  let created = 0;
-  let updated = 0;
+  if (!(file instanceof File) || file.size === 0) return { error: "Chưa chọn tệp" };
+  if (file.size > 5_000_000) return { error: "Tệp quá lớn (tối đa 5MB)" };
+  const { rows, error } = await readTable(file, STUDENT_COLUMNS, ["code", "fullName"]);
+  if (error) return { error };
+  const items: ProvisionItem[] = [];
   const errors: string[] = [];
-  for (const [i, r] of rows.entries()) {
-    const [code, fullName, dob, gender, address, parentName, parentPhone] = r;
-    if (!code || !fullName) { errors.push(`Dòng ${i + 2}: thiếu mã hoặc họ tên`); continue; }
-    const g = gender?.toLowerCase();
-    const data = {
-      fullName,
-      dob: parseDob(dob ?? ""),
-      gender: g === "nam" ? "NAM" : g === "nữ" || g === "nu" ? "NU" : null,
-      address: address || null,
-      parentName: parentName || null,
-      parentPhone: parentPhone || null,
-    };
-    const key = { schoolId_code: { schoolId: cls.schoolId, code: code.toUpperCase() } };
-    const existing = await db.student.findUnique({ where: key });
-    if (existing && existing.classId !== cls.id) {
-      errors.push(`Dòng ${i + 2}: mã ${code} đang thuộc lớp khác`);
-      continue;
-    }
-    if (existing) { await db.student.update({ where: key, data }); updated++; }
-    else {
-      await db.student.create({ data: { ...data, code: code.toUpperCase(), schoolId: cls.schoolId, classId: cls.id } });
-      created++;
-    }
+  for (const { row, values } of rows) {
+    if (!values.code || !values.fullName) { errors.push(`Dòng ${row}: thiếu mã hoặc họ tên`); continue; }
+    const other = values.className && values.className.replace(/\s/g, "").toUpperCase() !== cls.name;
+    if (other) { errors.push(`Dòng ${row}: thuộc lớp ${values.className}, bỏ qua`); continue; }
+    items.push({ row, classId: cls.id, data: toStudentInput(values) });
   }
+  const res = await provisionStudents({ schoolId: cls.schoolId, items });
   revalidatePath(`/classes/${cls.id}`);
-  const msg = `Thêm mới ${created}, cập nhật ${updated} học sinh.`;
-  return errors.length ? { error: `${msg} Lỗi: ${errors.slice(0, 5).join("; ")}${errors.length > 5 ? "…" : ""}` } : { ok: msg };
+  const all = [...errors, ...res.errors, ...res.warnings];
+  const msg = summarize(res);
+  return all.length ? { error: `${msg} Cần kiểm tra: ${all.slice(0, 8).join("; ")}${all.length > 8 ? ` … (+${all.length - 8})` : ""}` } : { ok: msg };
+}
+
+/** Bổ sung tài khoản HS / PH cho các học sinh trong lớp chưa có. */
+export async function createMissingAccounts(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const { cls } = await requireClassAccess(str(form, "classId"));
+  const students = await db.student.findMany({
+    where: { classId: cls.id, OR: [{ userId: null }, { parentUserId: null }] },
+  });
+  if (!students.length) return { ok: "Tất cả học sinh đã có đủ tài khoản" };
+  const res = await provisionStudents({
+    schoolId: cls.schoolId,
+    updateInfo: false,
+    items: students.map((s) => ({ row: 0, classId: cls.id, data: { ...s, code: s.code } })),
+  });
+  revalidatePath(`/classes/${cls.id}/accounts`);
+  return res.warnings.length
+    ? { error: `Đã tạo ${res.studentAccounts} TK học sinh, ${res.parentAccounts} TK phụ huynh. ${res.warnings.join("; ")}` }
+    : { ok: `Đã tạo ${res.studentAccounts} tài khoản học sinh, ${res.parentAccounts} tài khoản phụ huynh` };
+}
+
+/** GVCN đặt lại mật khẩu mặc định cho tài khoản học sinh / phụ huynh của lớp mình. */
+export async function resetFamilyPassword(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const { student } = await requireStudentAccess(str(form, "studentId"));
+  const which = str(form, "which");
+  const id = which === "parent" ? student.parentUserId : student.userId;
+  if (!id) return { error: "Học sinh chưa có tài khoản này" };
+  await resetToDefault([id], student.schoolId);
+  return { ok: `Đã đặt lại mật khẩu ${which === "parent" ? "phụ huynh" : "học sinh"} về mặc định` };
 }
 
 export async function saveAttendance(_: ActionResult, form: FormData): Promise<ActionResult> {

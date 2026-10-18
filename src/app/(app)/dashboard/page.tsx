@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { toDay } from "@/lib/utils";
@@ -7,11 +8,19 @@ export default async function Dashboard() {
   const user = await requireUser();
   const today = toDay();
 
+  if (user.role === "STUDENT" || user.role === "PARENT") {
+    const first = await db.student.findFirst({
+      where: user.role === "PARENT" ? { parentUserId: user.id } : { userId: user.id },
+      orderBy: { fullName: "asc" },
+    });
+    redirect(first ? `/portal/${first.id}` : "/account");
+  }
+
   if (user.role === "SUPER_ADMIN") {
     const [schools, students, teachers] = await Promise.all([
       db.school.count(),
       db.student.count({ where: { status: "ACTIVE" } }),
-      db.user.count({ where: { role: { not: "SUPER_ADMIN" } } }),
+      db.user.count({ where: { role: { in: ["SCHOOL_ADMIN", "TEACHER"] } } }),
     ]);
     return (
       <>

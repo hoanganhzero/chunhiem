@@ -9,7 +9,7 @@ import type { Role } from "./constants";
 export type CurrentUser = {
   id: string;
   name: string;
-  email: string;
+  username: string;
   role: Role;
   schoolId: string | null;
   schoolName: string | null;
@@ -27,7 +27,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return {
     id: user.id,
     name: user.name,
-    email: user.email,
+    username: user.username,
     role: user.role as Role,
     schoolId: user.schoolId,
     schoolName: user.school?.name ?? null,
@@ -73,4 +73,19 @@ export async function requireStudentAccess(studentId: string) {
   if (!student) notFound();
   const { user, cls } = await requireClassAccess(student.classId);
   return { user, cls, student };
+}
+
+/** Học sinh xem hồ sơ của chính mình, phụ huynh xem hồ sơ của con. */
+export async function requireFamilyAccess(studentId: string) {
+  const user = await requireUser("STUDENT", "PARENT");
+  const student = await db.student.findUnique({
+    where: { id: studentId },
+    include: { class: { include: { academicYear: true, homeroomTeacher: { select: { name: true, phone: true } } } } },
+  });
+  if (!student) notFound();
+  const allowed =
+    (user.role === "STUDENT" && student.userId === user.id) ||
+    (user.role === "PARENT" && student.parentUserId === user.id);
+  if (!allowed) notFound();
+  return { user, student };
 }

@@ -1,9 +1,9 @@
-import { GENDERS, STUDENT_STATUS } from "@/lib/constants";
+import { GENDERS, RELATIONS, STUDENT_STATUS } from "@/lib/constants";
 import { isoDay } from "@/lib/utils";
 
 type S = {
-  code?: string; fullName?: string; dob?: Date | null; gender?: string | null; address?: string | null;
-  parentName?: string | null; parentPhone?: string | null; note?: string | null; status?: string;
+  code?: string; fullName?: string; dob?: Date | null; gender?: string | null; ethnicity?: string | null; address?: string | null;
+  parentName?: string | null; parentRelation?: string | null; parentPhone?: string | null; note?: string | null; status?: string;
 };
 
 export function StudentFields({ s = {}, withCode, withStatus }: { s?: S; withCode?: boolean; withStatus?: boolean }) {
@@ -19,8 +19,16 @@ export function StudentFields({ s = {}, withCode, withStatus }: { s?: S; withCod
           {Object.entries(GENDERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </div>
+      <div className="field"><label>Dân tộc</label><input name="ethnicity" defaultValue={s.ethnicity ?? ""} /></div>
       <div className="field"><label>Địa chỉ</label><input name="address" defaultValue={s.address ?? ""} /></div>
       <div className="field"><label>Họ tên phụ huynh</label><input name="parentName" defaultValue={s.parentName ?? ""} /></div>
+      <div className="field">
+        <label>Quan hệ</label>
+        <select name="parentRelation" defaultValue={s.parentRelation ?? ""}>
+          <option value="">—</option>
+          {RELATIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+      </div>
       <div className="field"><label>SĐT phụ huynh</label><input name="parentPhone" type="tel" defaultValue={s.parentPhone ?? ""} /></div>
       {withStatus && (
         <div className="field">

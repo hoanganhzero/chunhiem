@@ -67,9 +67,25 @@ export function toCsv(rows: (string | number | null | undefined)[][]) {
 /** Đọc ngày dạng dd/mm/yyyy hoặc yyyy-mm-dd */
 export function parseDob(s: string): Date | null {
   if (!s) return null;
+  // Số seri ngày của Excel (vd 40179 = 01/01/2010) khi ô ngày bị định dạng văn bản / số
+  if (/^\d{5}(\.\d+)?$/.test(s)) {
+    const n = Math.floor(Number(s));
+    if (n > 10000 && n < 80000) return new Date(Date.UTC(1899, 11, 30) + n * 86400000);
+  }
   let m = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
   if (m) return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));
   m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
   return null;
+}
+
+/** Sắp xếp họ tên kiểu Việt Nam: theo tên (từ cuối), rồi họ đệm. */
+export function vnNameCompare(a: string, b: string) {
+  const key = (s: string) => {
+    const parts = s.trim().split(/\s+/);
+    return [parts[parts.length - 1], s];
+  };
+  const [ta, fa] = key(a);
+  const [tb, fb] = key(b);
+  return ta.localeCompare(tb, "vi") || fa.localeCompare(fb, "vi");
 }

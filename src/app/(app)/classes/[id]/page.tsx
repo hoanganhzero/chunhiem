@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireClassAccess } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { GENDERS, STUDENT_STATUS } from "@/lib/constants";
-import { fmtDate } from "@/lib/utils";
+import { fmtDate, vnNameCompare } from "@/lib/utils";
 import { ClassHeader } from "@/components/ClassHeader";
 import { StudentFields } from "@/components/StudentFields";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
@@ -13,7 +13,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const { cls } = await requireClassAccess(id);
   const students = await db.student.findMany({
     where: { classId: cls.id },
-    orderBy: [{ status: "asc" }, { fullName: "asc" }],
+    orderBy: { status: "asc" },
     include: {
       _count: {
         select: {
@@ -23,6 +23,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       },
     },
   });
+  students.sort((a, b) => (a.status === "ACTIVE" ? 0 : 1) - (b.status === "ACTIVE" ? 0 : 1) || vnNameCompare(a.fullName, b.fullName));
   const active = students.filter((s) => s.status === "ACTIVE");
   const male = active.filter((s) => s.gender === "NAM").length;
 
@@ -37,7 +38,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       <div className="card">
         <div className="page-head" style={{ marginBottom: 10 }}>
           <h2 style={{ margin: 0 }}>Danh sách học sinh</h2>
-          <a className="btn secondary" href={`/classes/${cls.id}/export`}>Xuất CSV</a>
+          <a className="btn secondary" href={`/classes/${cls.id}/reports`}>Xuất Excel / báo cáo</a>
         </div>
         <div className="table-wrap">
           <table>
@@ -67,25 +68,25 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       </div>
 
       <div className="card">
-        <h2>Thêm học sinh</h2>
-        <ActionForm action={createStudent} resetOnSuccess>
+        <h2>Nhập danh sách từ Excel — tạo luôn tài khoản học sinh & phụ huynh</h2>
+        <p className="small muted" style={{ marginTop: 0 }}>
+          Tải <a href="/templates/hoc-sinh"><strong>tệp mẫu chuẩn (.xlsx)</strong></a>, điền danh sách (hoặc dán từ CSDL ngành / SMAS / vnEdu), rồi tải lên.
+          Tài khoản: học sinh = mã HS, phụ huynh = SĐT phụ huynh, mật khẩu ban đầu = mật khẩu mặc định của trường.
+          Nhập lại không tạo trùng — học sinh trùng mã được cập nhật.
+        </p>
+        <ActionForm action={importStudents} className="inline">
           <input type="hidden" name="classId" value={cls.id} />
-          <StudentFields withCode />
-          <SubmitButton>Thêm học sinh</SubmitButton>
+          <input type="file" name="file" accept=".xlsx,.csv" required />
+          <SubmitButton>Nhập danh sách</SubmitButton>
         </ActionForm>
       </div>
 
       <div className="card">
-        <h2>Nhập danh sách từ CSV / Excel</h2>
-        <p className="small muted" style={{ marginTop: 0 }}>
-          Lưu file Excel dưới dạng <strong>CSV UTF-8</strong>. Dòng đầu là tiêu đề, thứ tự cột:
-          Mã HS, Họ tên, Ngày sinh (dd/mm/yyyy), Giới tính (Nam/Nữ), Địa chỉ, Họ tên phụ huynh, SĐT phụ huynh.
-          Học sinh trùng mã sẽ được cập nhật.
-        </p>
-        <ActionForm action={importStudents} className="inline">
+        <h2>Thêm một học sinh</h2>
+        <ActionForm action={createStudent} resetOnSuccess>
           <input type="hidden" name="classId" value={cls.id} />
-          <input type="file" name="file" accept=".csv,text/csv" required />
-          <SubmitButton>Nhập dữ liệu</SubmitButton>
+          <StudentFields withCode />
+          <SubmitButton>Thêm học sinh</SubmitButton>
         </ActionForm>
       </div>
     </>

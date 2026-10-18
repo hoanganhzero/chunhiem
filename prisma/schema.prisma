@@ -18,29 +18,43 @@ model School {
   name      String
   address   String?
   phone     String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  authority String? // cơ quan chủ quản, vd: Sở GD&ĐT TP. Hồ Chí Minh
+  principal String? // hiệu trưởng
+  location  String? // địa danh ghi ở chữ ký báo cáo, vd: TP. Hồ Chí Minh
+  // Mật khẩu mặc định cấp cho tài khoản mới / khi đặt lại. Người dùng bắt buộc đổi ở lần đăng nhập đầu.
+  defaultPassword String   @default("12345678")
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
 
-  users         User[]
-  academicYears AcademicYear[]
-  classes       Class[]
-  students      Student[]
+  users           User[]
+  academicYears   AcademicYear[]
+  classes         Class[]
+  students        Student[]
+  subjects        Subject[]
+  reportTemplates ReportTemplate[]
 }
 
 model User {
   id           String   @id @default(cuid())
   schoolId     String? // null = quản trị hệ thống (SUPER_ADMIN)
   school       School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  email        String   @unique
-  name         String
-  phone        String?
-  passwordHash String
-  role         String // SUPER_ADMIN | SCHOOL_ADMIN | TEACHER
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  // Tên đăng nhập: giáo viên = email, học sinh = mã HS, phụ huynh = SĐT (chữ thường)
+  username           String   @unique
+  email              String?
+  name               String
+  phone              String?
+  passwordHash       String
+  role               String // SUPER_ADMIN | SCHOOL_ADMIN | TEACHER | STUDENT | PARENT
+  mustChangePassword Boolean  @default(false)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
 
   homeroomClasses Class[]         @relation("Homeroom")
   conductRecords  ConductRecord[]
+  studentProfile  Student?        @relation("StudentAccount")
+  children        Student[]       @relation("ParentAccount")
+  announcements   Announcement[]
+  messages        Message[]
 
   @@index([schoolId])
 }
@@ -49,11 +63,13 @@ model AcademicYear {
   id        String  @id @default(cuid())
   schoolId  String
   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  name      String // vd: 2026-2027
-  isCurrent Boolean @default(false)
+  name           String // vd: 2026-2027
+  isCurrent      Boolean   @default(false)
+  semester2Start DateTime? // ngày bắt đầu học kỳ 2 (mặc định 15/01)
 
   classes     Class[]
   evaluations ConductEvaluation[]
+  grades      Grade[]
 
   @@unique([schoolId, name])
 }
@@ -69,8 +85,9 @@ model Class {
   homeroomTeacherId String?
   homeroomTeacher   User?        @relation("Homeroom", fields: [homeroomTeacherId], references: [id], onDelete: SetNull)
 
-  students    Student[]
-  attendances Attendance[]
+  students      Student[]
+  attendances   Attendance[]
+  announcements Announcement[]
 
   @@unique([academicYearId, name])
   @@index([schoolId])
@@ -85,20 +102,29 @@ model Student {
   code        String // mã học sinh
   fullName    String
   dob         DateTime?
-  gender      String? // NAM | NU
-  address     String?
-  parentName  String?
-  parentPhone String?
-  note        String?
-  status      String    @default("ACTIVE") // ACTIVE | TRANSFERRED | DROPPED
-  createdAt   DateTime  @default(now())
+  gender         String? // NAM | NU
+  ethnicity      String?
+  address        String?
+  parentName     String?
+  parentRelation String? // Bố | Mẹ | Người giám hộ
+  parentPhone    String?
+  note           String?
+  status         String    @default("ACTIVE") // ACTIVE | TRANSFERRED | DROPPED
+  createdAt      DateTime  @default(now())
+  userId         String?   @unique
+  user           User?     @relation("StudentAccount", fields: [userId], references: [id], onDelete: SetNull)
+  parentUserId   String?
+  parentUser     User?     @relation("ParentAccount", fields: [parentUserId], references: [id], onDelete: SetNull)
 
   attendances    Attendance[]
   conductRecords ConductRecord[]
   evaluations    ConductEvaluation[]
+  grades         Grade[]
+  messages       Message[]
 
   @@unique([schoolId, code])
   @@index([classId])
+  @@index([parentUserId])
 }
 
 model Attendance {
@@ -143,4 +169,77 @@ model ConductEvaluation {
   comment        String?
 
   @@unique([studentId, academicYearId, semester])
+}
+
+model Subject {
+  id       String  @id @default(cuid())
+  schoolId String
+  school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  code     String // vd: TOAN — dùng trong mẫu báo cáo {{diem_TOAN}}
+  name     String
+  type     String  @default("SCORE") // SCORE (đánh giá bằng điểm) | COMMENT (Đạt / Chưa đạt)
+  order    Int     @default(0)
+  active   Boolean @default(true)
+
+  grades Grade[]
+
+  @@unique([schoolId, code])
+}
+
+// Điểm theo Thông tư 22: TX (thường xuyên, idx 1..5), GK (giữa kỳ), CK (cuối kỳ),
+// DG (môn đánh giá bằng nhận xét: score 1 = Đạt, 0 = Chưa đạt)
+model Grade {
+  id             String       @id @default(cuid())
+  studentId      String
+  student        Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  semester       Int
+  kind           String
+  idx            Int          @default(0)
+  score          Float
+
+  @@unique([studentId, subjectId, academicYearId, semester, kind, idx])
+  @@index([subjectId, academicYearId, semester])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([classId, createdAt])
+}
+
+// Trao đổi giữa GVCN và phụ huynh, mỗi học sinh một luồng
+model Message {
+  id         String   @id @default(cuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  senderId   String?
+  sender     User?    @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  fromFamily Boolean // true = phụ huynh gửi, false = giáo viên gửi
+  content    String
+  read       Boolean  @default(false) // người nhận đã đọc
+  createdAt  DateTime @default(now())
+
+  @@index([studentId, createdAt])
+}
+
+// Mẫu báo cáo Excel riêng của trường (có các ô {{...}})
+model ReportTemplate {
+  id        String   @id @default(cuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name      String
+  fileName  String
+  data      Bytes
+  createdAt DateTime @default(now())
 }
