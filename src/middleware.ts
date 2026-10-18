@@ -5,6 +5,7 @@ export async function middleware(req: NextRequest) {
   const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
   const path = req.nextUrl.pathname;
   const isLogin = path.startsWith("/login");
+  if (path === "/setup") return NextResponse.next(); // trang tự khoá khi đã có tài khoản
   if (!session && !isLogin) return NextResponse.redirect(new URL("/login", req.url));
   if (session && isLogin) return NextResponse.redirect(new URL("/dashboard", req.url));
   // Tài khoản mới / vừa đặt lại mật khẩu: bắt buộc đổi mật khẩu trước khi dùng hệ thống

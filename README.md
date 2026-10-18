@@ -135,7 +135,12 @@ npx web-push generate-vapid-keys     # → VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
 
 Bấm **Deploy**. Vercel tự chạy `npm run vercel-build`: tạo / cập nhật bảng (`prisma migrate deploy`) rồi build. Mỗi lần đẩy code lên `main` sẽ tự triển khai lại.
 
-**4. Tạo tài khoản quản trị hệ thống** (một lần, trên máy của bạn, trỏ vào CSDL Neon)
+**4. Tạo tài khoản quản trị hệ thống** — mở `https://<tên-miền>/setup` (trang đăng nhập tự chuyển tới đây khi CSDL còn trống),
+nhập tên đăng nhập + mật khẩu ≥ 10 ký tự. Trang tự khoá ngay khi đã có tài khoản; muốn chắc chắn không ai tạo trước,
+thêm biến `SETUP_CODE` trên Vercel và nhập mã đó khi khởi tạo. Nếu CSDL chưa kết nối được, trang `/setup` báo lỗi
+và cho biết biến môi trường nào còn thiếu (không hiển thị giá trị).
+
+Hoặc chạy trên máy của bạn, trỏ vào CSDL Neon:
 ```bash
 DATABASE_URL="<chuỗi kết nối trực tiếp>" npm run admin:create -- quantri "MatKhau-Manh-Toi-Thieu-10-Ky-Tu"
 ```

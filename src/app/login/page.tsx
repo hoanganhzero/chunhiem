@@ -2,10 +2,17 @@ import { BookMarked, CalendarCheck, FileSpreadsheet, MessageCircle, Smartphone }
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { PasswordInput } from "@/components/PasswordInput";
 import { login } from "@/actions/auth";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
 
 export const metadata = { title: "Đăng nhập" };
 
-export default function LoginPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LoginPage() {
+  // Triển khai mới, CSDL trống hoặc chưa kết nối được → trang khởi tạo
+  const users = await db.user.count().catch(() => 0);
+  if (users === 0) redirect("/setup");
   return (
     <div className="auth">
       <section className="auth-hero">
